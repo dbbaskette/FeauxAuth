@@ -4,13 +4,32 @@ services:
     ports:
       - "8080:8080"
     environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/feauxauth
+      DATABASE_USERNAME: feauxauth
+      DATABASE_PASSWORD: feauxauth
       FEAUXAUTH_ISSUER: http://localhost:8080
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: feauxauth
-      FEAUXAUTH_DB_PATH: /app/data/feauxauth
-    volumes:
-      - feauxauth-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: feauxauth
+      POSTGRES_USER: feauxauth
+      POSTGRES_PASSWORD: feauxauth
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feauxauth"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 volumes:
-  feauxauth-data:
+  pgdata:
