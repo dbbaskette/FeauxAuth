@@ -107,7 +107,7 @@ public class TokenController {
         }
 
         if (authCode.getScope().contains("openid")) {
-            String idToken = tokenService.mintIdToken(user, client, authCode.getScope(), null);
+            String idToken = tokenService.mintIdToken(user, client, authCode.getScope(), authCode.getNonce());
             response.put("id_token", idToken);
         }
 

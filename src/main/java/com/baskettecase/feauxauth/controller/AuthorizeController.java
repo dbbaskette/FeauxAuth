@@ -92,6 +92,7 @@ public class AuthorizeController {
         String scope = (String) session.getAttribute("auth_scope");
         String state = (String) session.getAttribute("auth_state");
         String codeChallenge = (String) session.getAttribute("auth_code_challenge");
+        String nonce = (String) session.getAttribute("auth_nonce");
 
         if (clientId == null || redirectUri == null) {
             model.addAttribute("error", "invalid_request");
@@ -110,7 +111,7 @@ public class AuthorizeController {
         OAuthUser user = userOpt.get();
         userService.recordLogin(user);
 
-        String code = authCodeService.generateCode(clientId, user.getId(), redirectUri, scope, codeChallenge);
+        String code = authCodeService.generateCode(clientId, user.getId(), redirectUri, scope, codeChallenge, nonce);
 
         session.removeAttribute("auth_client_id");
         session.removeAttribute("auth_redirect_uri");

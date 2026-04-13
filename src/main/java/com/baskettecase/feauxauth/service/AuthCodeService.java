@@ -18,7 +18,7 @@ public class AuthCodeService {
     private final AuthCodeRepository authCodeRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public String generateCode(String clientId, UUID userId, String redirectUri, String scope, String codeChallenge) {
+    public String generateCode(String clientId, UUID userId, String redirectUri, String scope, String codeChallenge, String nonce) {
         byte[] codeBytes = new byte[32];
         secureRandom.nextBytes(codeBytes);
         String codeValue = Base64.getUrlEncoder().withoutPadding().encodeToString(codeBytes);
@@ -30,6 +30,7 @@ public class AuthCodeService {
         authCode.setRedirectUri(redirectUri);
         authCode.setScope(scope);
         authCode.setCodeChallenge(codeChallenge);
+        authCode.setNonce(nonce);
         authCode.setExpiresAt(LocalDateTime.now().plusSeconds(120));
         authCode.setUsed(false);
 
