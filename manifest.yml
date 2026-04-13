@@ -1,0 +1,17 @@
+applications:
+  - name: feauxauth
+    memory: 512M
+    disk_quota: 512M
+    instances: 1
+    buildpacks:
+      - java_buildpack
+    path: target/feauxauth-1.0.0.jar
+    health-check-type: http
+    health-check-http-endpoint: /.well-known/openid-configuration
+    services:
+      - feauxauth-db
+    env:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: changeme
+      JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
+      SPRING_PROFILES_ACTIVE: cloud
