@@ -1,0 +1,16 @@
+services:
+  feauxauth:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      FEAUXAUTH_ISSUER: http://localhost:8080
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: feauxauth
+      FEAUXAUTH_DB_PATH: /app/data/feauxauth
+    volumes:
+      - feauxauth-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  feauxauth-data:

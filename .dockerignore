@@ -1,0 +1,13 @@
+target/
+frontend/node_modules/
+frontend/node/
+frontend/dist/
+*.db
+*.db.mv.db
+*.db.trace.db
+.idea/
+.vscode/
+.git/
+.DS_Store
+.env
+FeauxAuth-Specification-v1.0.docx
