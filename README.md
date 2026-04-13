@@ -7,13 +7,14 @@ A lightweight OAuth 2.0 / OIDC authorization server built for lab and demo envir
 ## Features
 
 - **OAuth 2.0 Authorization Code** flow with optional **PKCE**
-- **OpenID Connect** discovery, ID tokens, and userinfo endpoint
-- **JWT access tokens** signed with RS256 (RSA-2048)
+- **OpenID Connect** discovery, ID tokens, userinfo endpoint, and nonce support
+- **JWT access tokens** signed with RS256 (RSA-2048), auto-generated signing keys
 - **Opaque refresh tokens** with configurable TTL
 - **Token revocation** (RFC 7009)
 - **Admin REST API** for managing clients, users, and tokens
 - **React admin dashboard** with dark theme
 - **Token inspector** — paste a JWT to decode, verify signature, and check revocation
+- **Seed data** — ships with a demo client and user so you can test immediately
 - **H2** for zero-config local dev, **Postgres** for Docker and production
 - **Cloud Foundry** ready with java-cfenv auto-reconfiguration
 
@@ -44,6 +45,19 @@ java -jar target/feauxauth-1.0.0.jar
 
 This uses an embedded H2 database — no Postgres needed.
 
+### Seed Data
+
+FeauxAuth ships with a pre-configured demo client and user so you can test the OAuth flow immediately:
+
+| Resource | Credential | Value |
+|----------|-----------|-------|
+| Demo Client | `client_id` | `demo-app` |
+| | `client_secret` | `demo-secret` |
+| | `redirect_uri` | `http://localhost:3000/callback` |
+| | `scopes` | `openid profile email offline_access` |
+| Demo User | `email` | `demo@feauxauth.local` |
+| | `password` | `password` |
+
 ### Cloud Foundry
 
 ```bash
@@ -54,6 +68,8 @@ cf push
 Requires a Postgres service instance named `feauxauth-db`. The `manifest.yml` is pre-configured.
 
 ## Usage
+
+> **Tip:** The seed data includes a `demo-app` client and `demo@feauxauth.local` user. Skip steps 1-2 if you just want to try the flow.
 
 ### 1. Create an OAuth Client
 
@@ -87,12 +103,12 @@ curl -u admin:feauxauth -X POST http://localhost:8080/api/admin/users \
 
 ### 3. Run the OAuth Flow
 
-**Start authorization:**
+**Start authorization** (uses the seed demo-app client):
 ```
-http://localhost:8080/oauth/authorize?client_id=my-app&redirect_uri=http://localhost:3000/callback&response_type=code&scope=openid%20email&state=random123
+http://localhost:8080/oauth/authorize?client_id=demo-app&redirect_uri=http://localhost:3000/callback&response_type=code&scope=openid%20email&state=random123
 ```
 
-The user logs in, and FeauxAuth redirects back with an authorization code.
+Log in with `demo@feauxauth.local` / `password`. FeauxAuth redirects back with an authorization code.
 
 **Exchange the code for tokens:**
 ```bash
@@ -100,8 +116,8 @@ curl -X POST http://localhost:8080/oauth/token \
   -d "grant_type=authorization_code" \
   -d "code=AUTHORIZATION_CODE" \
   -d "redirect_uri=http://localhost:3000/callback" \
-  -d "client_id=my-app" \
-  -d "client_secret=YOUR_SECRET"
+  -d "client_id=demo-app" \
+  -d "client_secret=demo-secret"
 ```
 
 Response:

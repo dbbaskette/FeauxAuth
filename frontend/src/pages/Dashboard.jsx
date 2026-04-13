@@ -2,14 +2,10 @@ import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import StatCard from '../components/StatCard'
 import DataTable from '../components/DataTable'
+import { tokenColumns } from '../components/tokenColumns'
 
-const tokenColumns = [
-  { key: 'jti', label: 'Token ID', render: v => v?.substring(0, 8) + '...' },
-  { key: 'clientId', label: 'Client' },
-  { key: 'userId', label: 'User', render: v => v?.substring(0, 8) + '...' },
-  { key: 'scope', label: 'Scopes' },
-  { key: 'createdAt', label: 'Issued', render: v => new Date(v).toLocaleString() },
-  { key: 'expiresAt', label: 'Expires', render: v => new Date(v).toLocaleString() },
+const dashboardColumns = [
+  ...tokenColumns,
   { key: 'revoked', label: 'Revoked', render: v => v ? 'Yes' : 'No' },
 ]
 
@@ -34,7 +30,7 @@ export default function Dashboard() {
       </div>
 
       <h2 className="text-lg font-semibold text-white mb-4">Recent Tokens</h2>
-      <DataTable columns={tokenColumns} data={stats.recentTokens || []} />
+      <DataTable columns={dashboardColumns} data={stats.recentTokens || []} />
     </div>
   )
 }

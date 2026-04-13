@@ -6,6 +6,7 @@ import com.baskettecase.feauxauth.model.OAuthUser;
 import com.baskettecase.feauxauth.model.RefreshToken;
 import com.baskettecase.feauxauth.repository.AccessTokenRepository;
 import com.baskettecase.feauxauth.repository.RefreshTokenRepository;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
@@ -32,16 +33,19 @@ class TokenServiceTest {
 
     private TokenService tokenService;
     private RSAKey rsaKey;
+    private RSASSASigner signer;
 
     @BeforeEach
     void setUp() throws Exception {
         rsaKey = new RSAKeyGenerator(2048).keyID("test-kid").generate();
+        signer = new RSASSASigner(rsaKey);
         tokenService = new TokenService(keyService, accessTokenRepository, refreshTokenRepository, "http://localhost:8080");
     }
 
     @Test
     void mintAccessToken_returnsValidJwt() throws Exception {
         when(keyService.getActiveRSAKey()).thenReturn(rsaKey);
+        when(keyService.getSigner()).thenReturn(signer);
         when(accessTokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         OAuthUser user = new OAuthUser();
@@ -87,6 +91,7 @@ class TokenServiceTest {
     @Test
     void verifyAccessToken_validToken_returnsClaims() throws Exception {
         when(keyService.getActiveRSAKey()).thenReturn(rsaKey);
+        when(keyService.getSigner()).thenReturn(signer);
         when(keyService.getPublicRSAKey()).thenReturn(rsaKey.toPublicJWK());
         when(accessTokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accessTokenRepository.findById(any())).thenAnswer(i -> {
@@ -115,6 +120,7 @@ class TokenServiceTest {
     @Test
     void verifyAccessToken_revokedToken_returnsEmpty() throws Exception {
         when(keyService.getActiveRSAKey()).thenReturn(rsaKey);
+        when(keyService.getSigner()).thenReturn(signer);
         when(keyService.getPublicRSAKey()).thenReturn(rsaKey.toPublicJWK());
         when(accessTokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(accessTokenRepository.findById(any())).thenAnswer(i -> {

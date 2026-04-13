@@ -38,16 +38,11 @@ public class AuthCodeService {
         return codeValue;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public Optional<AuthCode> consumeCode(String code) {
-        Optional<AuthCode> authCode = authCodeRepository.findById(code);
-        if (authCode.isEmpty()) return Optional.empty();
+        int updated = authCodeRepository.markUsed(code, LocalDateTime.now());
+        if (updated == 0) return Optional.empty();
 
-        AuthCode ac = authCode.get();
-        if (ac.isUsed()) return Optional.empty();
-        if (ac.getExpiresAt().isBefore(LocalDateTime.now())) return Optional.empty();
-
-        ac.setUsed(true);
-        authCodeRepository.save(ac);
-        return Optional.of(ac);
+        return authCodeRepository.findById(code);
     }
 }

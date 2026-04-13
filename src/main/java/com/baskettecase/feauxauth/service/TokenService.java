@@ -42,80 +42,72 @@ public class TokenService {
     }
 
     public String mintAccessToken(OAuthUser user, OAuthClient client, String scope) {
-        try {
-            RSAKey rsaKey = keyService.getActiveRSAKey();
-            String jti = UUID.randomUUID().toString();
-            Date now = new Date();
-            Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
+        String jti = UUID.randomUUID().toString();
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
 
-            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-                    .issuer(issuer)
-                    .subject(user.getEmail())
-                    .audience(client.getClientId())
-                    .expirationTime(expiry)
-                    .issueTime(now)
-                    .jwtID(jti)
-                    .claim("scope", scope);
+        JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                .issuer(issuer)
+                .subject(user.getEmail())
+                .audience(client.getClientId())
+                .expirationTime(expiry)
+                .issueTime(now)
+                .jwtID(jti)
+                .claim("scope", scope);
 
-            if (scope.contains("email") || scope.contains("openid")) {
-                claimsBuilder.claim("email", user.getEmail());
-            }
-            if (scope.contains("profile")) {
-                claimsBuilder.claim("name", user.getDisplayName());
-            }
-
-            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
-                    .keyID(rsaKey.getKeyID())
-                    .type(JOSEObjectType.JWT)
-                    .build();
-
-            SignedJWT signedJWT = new SignedJWT(header, claimsBuilder.build());
-            signedJWT.sign(new RSASSASigner(rsaKey));
-
-            AccessToken accessToken = new AccessToken();
-            accessToken.setJti(jti);
-            accessToken.setClientId(client.getClientId());
-            accessToken.setUserId(user.getId());
-            accessToken.setScope(scope);
-            accessToken.setExpiresAt(LocalDateTime.ofInstant(expiry.toInstant(), ZoneOffset.UTC));
-            accessToken.setCreatedAt(LocalDateTime.now());
-            accessTokenRepository.save(accessToken);
-
-            return signedJWT.serialize();
-        } catch (JOSEException e) {
-            throw new RuntimeException("Failed to sign access token", e);
+        if (scope.contains("email") || scope.contains("openid")) {
+            claimsBuilder.claim("email", user.getEmail());
         }
+        if (scope.contains("profile")) {
+            claimsBuilder.claim("name", user.getDisplayName());
+        }
+
+        String jwt = signJwt(claimsBuilder.build());
+
+        AccessToken accessToken = new AccessToken();
+        accessToken.setJti(jti);
+        accessToken.setClientId(client.getClientId());
+        accessToken.setUserId(user.getId());
+        accessToken.setScope(scope);
+        accessToken.setExpiresAt(LocalDateTime.ofInstant(expiry.toInstant(), ZoneOffset.UTC));
+        accessToken.setCreatedAt(LocalDateTime.now());
+        accessTokenRepository.save(accessToken);
+
+        return jwt;
     }
 
     public String mintIdToken(OAuthUser user, OAuthClient client, String scope, String nonce) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
+
+        JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                .issuer(issuer)
+                .subject(user.getEmail())
+                .audience(client.getClientId())
+                .expirationTime(expiry)
+                .issueTime(now)
+                .claim("email", user.getEmail())
+                .claim("name", user.getDisplayName());
+
+        if (nonce != null && !nonce.isBlank()) {
+            claimsBuilder.claim("nonce", nonce);
+        }
+
+        return signJwt(claimsBuilder.build());
+    }
+
+    private String signJwt(JWTClaimsSet claims) {
         try {
             RSAKey rsaKey = keyService.getActiveRSAKey();
-            Date now = new Date();
-            Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
-
-            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-                    .issuer(issuer)
-                    .subject(user.getEmail())
-                    .audience(client.getClientId())
-                    .expirationTime(expiry)
-                    .issueTime(now)
-                    .claim("email", user.getEmail())
-                    .claim("name", user.getDisplayName());
-
-            if (nonce != null && !nonce.isBlank()) {
-                claimsBuilder.claim("nonce", nonce);
-            }
-
             JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                     .keyID(rsaKey.getKeyID())
                     .type(JOSEObjectType.JWT)
                     .build();
-
-            SignedJWT signedJWT = new SignedJWT(header, claimsBuilder.build());
-            signedJWT.sign(new RSASSASigner(rsaKey));
+            SignedJWT signedJWT = new SignedJWT(header, claims);
+            signedJWT.sign(keyService.getSigner());
             return signedJWT.serialize();
         } catch (JOSEException e) {
-            throw new RuntimeException("Failed to sign ID token", e);
+            throw new RuntimeException("Failed to sign JWT", e);
         }
     }
 
@@ -190,5 +182,11 @@ public class TokenService {
         }
 
         return false;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void revokeAllForUser(UUID userId) {
+        accessTokenRepository.revokeAllByUserId(userId);
+        refreshTokenRepository.revokeAllByUserId(userId);
     }
 }

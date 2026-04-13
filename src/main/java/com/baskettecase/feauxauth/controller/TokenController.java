@@ -23,6 +23,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TokenController {
 
+    private static final String GRANT_AUTHORIZATION_CODE = "authorization_code";
+    private static final String GRANT_REFRESH_TOKEN = "refresh_token";
+
     private final AuthCodeService authCodeService;
     private final TokenService tokenService;
     private final ClientService clientService;
@@ -46,16 +49,16 @@ public class TokenController {
         }
         OAuthClient client = clientOpt.get();
 
-        boolean isPkce = codeVerifier != null && !codeVerifier.isBlank();
-        if (!isPkce) {
+        // Public clients use PKCE; confidential clients must provide valid client_secret
+        if (!client.isRequirePkce()) {
             if (clientSecret == null || !clientService.verifySecret(client, clientSecret)) {
                 return errorResponse("invalid_client", "Invalid client credentials");
             }
         }
 
-        if ("authorization_code".equals(grantType)) {
+        if (GRANT_AUTHORIZATION_CODE.equals(grantType)) {
             return handleAuthorizationCode(client, code, redirectUri, codeVerifier);
-        } else if ("refresh_token".equals(grantType)) {
+        } else if (GRANT_REFRESH_TOKEN.equals(grantType)) {
             return handleRefreshToken(client, refreshTokenValue);
         } else {
             return errorResponse("unsupported_grant_type", "Supported: authorization_code, refresh_token");
@@ -94,24 +97,7 @@ public class TokenController {
         }
         OAuthUser user = userOpt.get();
 
-        String accessToken = tokenService.mintAccessToken(user, client, authCode.getScope());
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("access_token", accessToken);
-        response.put("token_type", "Bearer");
-        response.put("expires_in", client.getAccessTokenTtl());
-
-        if (client.getRefreshTokenTtl() > 0) {
-            String refreshToken = tokenService.mintRefreshToken(user, client, authCode.getScope());
-            response.put("refresh_token", refreshToken);
-        }
-
-        if (authCode.getScope().contains("openid")) {
-            String idToken = tokenService.mintIdToken(user, client, authCode.getScope(), authCode.getNonce());
-            response.put("id_token", idToken);
-        }
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildTokenResponse(user, client, authCode.getScope(), authCode.getNonce(), null));
     }
 
     private ResponseEntity<?> handleRefreshToken(OAuthClient client, String refreshTokenValue) {
@@ -144,20 +130,28 @@ public class TokenController {
         }
         OAuthUser user = userOpt.get();
 
-        String accessToken = tokenService.mintAccessToken(user, client, rt.getScope());
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("access_token", accessToken);
-        response.put("token_type", "Bearer");
-        response.put("expires_in", client.getAccessTokenTtl());
-        response.put("refresh_token", refreshTokenValue);
-
-        if (rt.getScope().contains("openid")) {
-            String idToken = tokenService.mintIdToken(user, client, rt.getScope(), null);
-            response.put("id_token", idToken);
-        }
+        Map<String, Object> response = buildTokenResponse(user, client, rt.getScope(), null, refreshTokenValue);
 
         return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> buildTokenResponse(OAuthUser user, OAuthClient client, String scope, String nonce, String existingRefreshToken) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", tokenService.mintAccessToken(user, client, scope));
+        response.put("token_type", "Bearer");
+        response.put("expires_in", client.getAccessTokenTtl());
+
+        if (existingRefreshToken != null) {
+            response.put("refresh_token", existingRefreshToken);
+        } else if (client.getRefreshTokenTtl() > 0) {
+            response.put("refresh_token", tokenService.mintRefreshToken(user, client, scope));
+        }
+
+        if (scope.contains("openid")) {
+            response.put("id_token", tokenService.mintIdToken(user, client, scope, nonce));
+        }
+
+        return response;
     }
 
     private ResponseEntity<Map<String, String>> errorResponse(String error, String description) {

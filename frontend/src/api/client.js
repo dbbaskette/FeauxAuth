@@ -28,6 +28,7 @@ export const api = {
 
   async get(url) {
     const res = await this.fetch(url)
+    if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`)
     return res.json()
   },
 
@@ -36,6 +37,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     })
+    if (!res.ok) throw new Error(`POST ${url} failed: ${res.status}`)
     return res.json()
   },
 
@@ -44,6 +46,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(body),
     })
+    if (!res.ok) throw new Error(`PUT ${url} failed: ${res.status}`)
     return res.json()
   },
 

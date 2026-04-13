@@ -2,6 +2,8 @@ package com.baskettecase.feauxauth.service;
 
 import com.baskettecase.feauxauth.model.SigningKey;
 import com.baskettecase.feauxauth.repository.SigningKeyRepository;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,9 @@ import java.util.UUID;
 public class KeyService {
 
     private final SigningKeyRepository signingKeyRepository;
+    private volatile RSAKey cachedRSAKey;
+    private volatile RSAKey cachedPublicKey;
+    private volatile RSASSASigner cachedSigner;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeKeyPair() {
@@ -59,40 +64,63 @@ public class KeyService {
     }
 
     public RSAKey getActiveRSAKey() {
-        SigningKey key = getActiveKey();
-        try {
-            java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
+        if (cachedRSAKey != null) return cachedRSAKey;
+        synchronized (this) {
+            if (cachedRSAKey != null) return cachedRSAKey;
+            SigningKey key = getActiveKey();
+            try {
+                java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
 
-            byte[] pubBytes = decodePem(key.getPublicKey());
-            RSAPublicKey publicKey = (RSAPublicKey) kf.generatePublic(
-                    new java.security.spec.X509EncodedKeySpec(pubBytes));
+                byte[] pubBytes = decodePem(key.getPublicKey());
+                RSAPublicKey publicKey = (RSAPublicKey) kf.generatePublic(
+                        new java.security.spec.X509EncodedKeySpec(pubBytes));
 
-            byte[] privBytes = decodePem(key.getPrivateKey());
-            RSAPrivateKey privateKey = (RSAPrivateKey) kf.generatePrivate(
-                    new java.security.spec.PKCS8EncodedKeySpec(privBytes));
+                byte[] privBytes = decodePem(key.getPrivateKey());
+                RSAPrivateKey privateKey = (RSAPrivateKey) kf.generatePrivate(
+                        new java.security.spec.PKCS8EncodedKeySpec(privBytes));
 
-            return new RSAKey.Builder(publicKey)
-                    .privateKey(privateKey)
-                    .keyID(key.getKid())
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load RSA key", e);
+                cachedRSAKey = new RSAKey.Builder(publicKey)
+                        .privateKey(privateKey)
+                        .keyID(key.getKid())
+                        .build();
+                return cachedRSAKey;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to load RSA key", e);
+            }
+        }
+    }
+
+    public RSASSASigner getSigner() {
+        if (cachedSigner != null) return cachedSigner;
+        synchronized (this) {
+            if (cachedSigner != null) return cachedSigner;
+            try {
+                cachedSigner = new RSASSASigner(getActiveRSAKey());
+                return cachedSigner;
+            } catch (JOSEException e) {
+                throw new RuntimeException("Failed to create RSA signer", e);
+            }
         }
     }
 
     public RSAKey getPublicRSAKey() {
-        SigningKey key = getActiveKey();
-        try {
-            java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
-            byte[] pubBytes = decodePem(key.getPublicKey());
-            RSAPublicKey publicKey = (RSAPublicKey) kf.generatePublic(
-                    new java.security.spec.X509EncodedKeySpec(pubBytes));
+        if (cachedPublicKey != null) return cachedPublicKey;
+        synchronized (this) {
+            if (cachedPublicKey != null) return cachedPublicKey;
+            SigningKey key = getActiveKey();
+            try {
+                java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
+                byte[] pubBytes = decodePem(key.getPublicKey());
+                RSAPublicKey publicKey = (RSAPublicKey) kf.generatePublic(
+                        new java.security.spec.X509EncodedKeySpec(pubBytes));
 
-            return new RSAKey.Builder(publicKey)
-                    .keyID(key.getKid())
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load public RSA key", e);
+                cachedPublicKey = new RSAKey.Builder(publicKey)
+                        .keyID(key.getKid())
+                        .build();
+                return cachedPublicKey;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to load public RSA key", e);
+            }
         }
     }
 
