@@ -7,14 +7,20 @@ A lightweight OAuth 2.0 / OIDC authorization server built for lab and demo envir
 ## Features
 
 - **OAuth 2.0 Authorization Code** flow with optional **PKCE**
-- **OpenID Connect** discovery, ID tokens, userinfo endpoint, and nonce support
+- **Client Credentials** grant for machine-to-machine authentication
+- **OpenID Connect** discovery, ID tokens, userinfo, nonce, and logout
 - **JWT access tokens** signed with RS256 (RSA-2048), auto-generated signing keys
+- **User roles** — comma-separated roles included as JSON array in JWT claims
 - **Opaque refresh tokens** with configurable TTL
-- **Token revocation** (RFC 7009)
+- **Token revocation** (RFC 7009) and **introspection** (RFC 7662)
+- **Consent screen** — optional per-client, with human-readable scope descriptions
+- **Dynamic client registration** (RFC 7591) — self-service client onboarding
+- **CORS** — configurable allowed origins for SPA integration
 - **Admin REST API** for managing clients, users, and tokens
 - **React admin dashboard** with dark theme
 - **Token inspector** — paste a JWT to decode, verify signature, and check revocation
 - **Seed data** — ships with a demo client and user so you can test immediately
+- **MCP server compatible** — works as the auth server for Model Context Protocol servers
 - **H2** for zero-config local dev, **Postgres** for Docker and production
 - **Cloud Foundry** ready with java-cfenv auto-reconfiguration
 
@@ -57,6 +63,7 @@ FeauxAuth ships with a pre-configured demo client and user so you can test the O
 | | `scopes` | `openid profile email offline_access` |
 | Demo User | `email` | `demo@feauxauth.local` |
 | | `password` | `password` |
+| | `roles` | `user,analyst` |
 
 ### Cloud Foundry
 
@@ -83,11 +90,26 @@ curl -u admin:feauxauth -X POST http://localhost:8080/api/admin/clients \
     "clientId": "my-app",
     "redirectUris": "http://localhost:3000/callback",
     "allowedScopes": "openid profile email",
-    "requirePkce": false
+    "requirePkce": false,
+    "requireConsent": true
   }'
 ```
 
 Save the `clientSecret` from the response — it won't be shown again.
+
+You can also use **dynamic client registration** (no admin auth needed):
+
+```bash
+curl -X POST http://localhost:8080/oauth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_name": "My App",
+    "redirect_uris": ["http://localhost:3000/callback"],
+    "scope": "openid profile email",
+    "grant_types": ["authorization_code"],
+    "token_endpoint_auth_method": "client_secret_post"
+  }'
+```
 
 ### 2. Create a User
 
@@ -97,7 +119,8 @@ curl -u admin:feauxauth -X POST http://localhost:8080/api/admin/users \
   -d '{
     "email": "alice@example.com",
     "displayName": "Alice",
-    "password": "password123"
+    "password": "password123",
+    "roles": "admin,editor"
   }'
 ```
 
@@ -157,6 +180,81 @@ curl -X POST http://localhost:8080/oauth/token \
   -d "client_id=my-app" \
   -d "code_verifier=$CODE_VERIFIER"
 ```
+
+### 5. Client Credentials (Machine-to-Machine)
+
+For service-to-service auth with no user involved:
+
+```bash
+curl -X POST http://localhost:8080/oauth/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=demo-app" \
+  -d "client_secret=demo-secret" \
+  -d "scope=openid"
+```
+
+Response:
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+The token's `sub` claim is the `client_id` (no user). Client secret is always required for this grant type, regardless of PKCE settings.
+
+### 6. Token Introspection
+
+Resource servers can validate tokens without parsing JWTs themselves:
+
+```bash
+curl -X POST http://localhost:8080/oauth/introspect \
+  -d "token=eyJhbGciOiJSUzI1NiIs..."
+```
+
+Active token response:
+```json
+{
+  "active": true,
+  "sub": "alice@example.com",
+  "client_id": "my-app",
+  "scope": "openid email",
+  "token_type": "Bearer",
+  "exp": 1713045600,
+  "iat": 1713042000,
+  "iss": "http://localhost:8080",
+  "jti": "a1b2c3d4-..."
+}
+```
+
+Expired, revoked, or invalid tokens return `{"active": false}` (HTTP 200, per RFC 7662).
+
+### 7. Logout
+
+OIDC RP-Initiated Logout:
+
+```
+GET http://localhost:8080/oauth/logout?id_token_hint=eyJ...&post_logout_redirect_uri=http://localhost:3000&state=xyz
+```
+
+This revokes all tokens for the user identified by the `id_token_hint`, invalidates the session, and redirects to the `post_logout_redirect_uri`. Without a redirect URI, a "Signed Out" confirmation page is shown.
+
+### 8. User Roles in Tokens
+
+When users have roles assigned (e.g., `admin,editor`), they appear as a JSON array in JWT claims:
+
+```json
+{
+  "sub": "alice@example.com",
+  "scope": "openid profile email",
+  "roles": ["admin", "editor"],
+  "email": "alice@example.com",
+  "name": "Alice"
+}
+```
+
+Roles are included in access tokens, ID tokens, and the `/oauth/userinfo` response. Configure roles per user via the admin UI or API.
 
 ## Using FeauxAuth with MCP Servers
 
@@ -301,7 +399,8 @@ Example decoded FeauxAuth access token payload:
   "jti": "a1b2c3d4-...",
   "scope": "openid profile email",
   "email": "analyst@example.com",
-  "name": "Data Analyst"
+  "name": "Data Analyst",
+  "roles": ["user", "analyst"]
 }
 ```
 
@@ -346,6 +445,7 @@ services:
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/.well-known/openid-configuration` | None | OIDC discovery document |
+| GET | `/.well-known/oauth-authorization-server` | None | OAuth 2.0 authorization server metadata |
 | GET | `/.well-known/jwks.json` | None | Public signing keys (JWKS) |
 
 ### OAuth Endpoints
@@ -353,10 +453,14 @@ services:
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/oauth/authorize` | None | Renders login page |
-| POST | `/oauth/authorize` | Session | Processes login, redirects with auth code |
-| POST | `/oauth/token` | Client credentials or PKCE | Exchanges code or refresh token for tokens |
-| GET | `/oauth/userinfo` | Bearer token | Returns user claims |
+| POST | `/oauth/authorize` | Session | Processes login, shows consent or redirects with auth code |
+| POST | `/oauth/consent` | Session | Processes consent approval/denial |
+| POST | `/oauth/token` | Client credentials or PKCE | Exchanges code, refresh token, or client credentials for tokens |
+| GET | `/oauth/userinfo` | Bearer token | Returns user claims (includes roles) |
 | POST | `/oauth/revoke` | None | Revokes an access or refresh token |
+| POST | `/oauth/introspect` | None | Token introspection (RFC 7662) |
+| GET | `/oauth/logout` | None | OIDC RP-Initiated Logout |
+| POST | `/oauth/register` | None | Dynamic client registration (RFC 7591) |
 
 ### Admin API
 
@@ -416,6 +520,7 @@ All configuration is via environment variables:
 | `FEAUXAUTH_ISSUER` | `http://localhost:8080` | Issuer URL in JWTs and OIDC discovery |
 | `ADMIN_USERNAME` | `admin` | Admin UI / API username |
 | `ADMIN_PASSWORD` | `feauxauth` | Admin UI / API password |
+| `FEAUXAUTH_CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed CORS origins for OAuth/OIDC endpoints |
 
 ## Tech Stack
 
@@ -437,15 +542,15 @@ All configuration is via environment variables:
 ```
 FeauxAuth/
 ├── src/main/java/com/baskettecase/feauxauth/
-│   ├── config/          # Security, app config, SPA routing
+│   ├── config/          # Security, CORS, app config, SPA routing
 │   ├── model/           # JPA entities (6)
 │   ├── repository/      # Spring Data repositories (6)
 │   ├── service/         # Business logic (Key, Token, AuthCode, PKCE, Client, User)
-│   └── controller/      # OAuth endpoints + admin API
+│   └── controller/      # OAuth, OIDC, introspection, registration + admin API
 ├── src/main/resources/
 │   ├── application.yml  # Default config (H2)
-│   ├── db/migration/    # Flyway SQL
-│   └── templates/oauth/ # Thymeleaf login/error pages
+│   ├── db/migration/    # Flyway SQL (V1-V3)
+│   └── templates/oauth/ # Thymeleaf login/consent/logout/error pages
 ├── frontend/            # React/Vite/Tailwind admin SPA
 ├── Dockerfile           # Multi-stage build
 ├── docker-compose.yml   # App + Postgres
