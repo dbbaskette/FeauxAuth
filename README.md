@@ -158,6 +158,187 @@ curl -X POST http://localhost:8080/oauth/token \
   -d "code_verifier=$CODE_VERIFIER"
 ```
 
+## Using FeauxAuth with MCP Servers
+
+FeauxAuth can serve as the OAuth authorization server for [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers that require authentication — for example, a Greenplum MCP server that protects database access behind OAuth login.
+
+### How It Works
+
+The MCP spec uses OAuth 2.1 with mandatory PKCE for HTTP-based servers. Three components are involved:
+
+```
+MCP Client (Claude Desktop, etc.)
+    |
+    |-- 1. Connects to MCP server, receives 401
+    |-- 2. Discovers auth server via MCP server's resource metadata
+    |-- 3. Fetches FeauxAuth's /.well-known/openid-configuration
+    |-- 4. Opens browser → FeauxAuth login page
+    |-- 5. User authenticates, gets authorization code
+    |-- 6. Exchanges code for JWT access token (PKCE)
+    |-- 7. Sends Bearer token to MCP server
+    v
+MCP Server (e.g., Greenplum MCP)
+    |-- Validates JWT signature via FeauxAuth's JWKS endpoint
+    |-- Checks issuer, audience, expiration
+    |-- Grants access to MCP resources
+    v
+FeauxAuth (Authorization Server)
+    |-- Issues RS256-signed JWT access tokens
+    |-- Serves OIDC discovery + JWKS for token verification
+```
+
+### Step 1: Register an OAuth Client for the MCP Client
+
+Create a PKCE-enabled client in FeauxAuth for the MCP client application (e.g., Claude Desktop). MCP clients are public clients, so enable `requirePkce` and note that no `client_secret` is needed at the token endpoint.
+
+```bash
+curl -u admin:feauxauth -X POST http://localhost:8080/api/admin/clients \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Claude Desktop",
+    "clientId": "claude-desktop",
+    "redirectUris": "http://localhost:3000/callback\nhttp://127.0.0.1:3000/callback",
+    "allowedScopes": "openid profile email",
+    "requirePkce": true,
+    "accessTokenTtl": 3600,
+    "refreshTokenTtl": 2592000
+  }'
+```
+
+Or create it through the admin UI at `/admin/clients/new`.
+
+### Step 2: Create Users
+
+Create user accounts for the people who will authenticate through the MCP flow:
+
+```bash
+curl -u admin:feauxauth -X POST http://localhost:8080/api/admin/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "analyst@example.com",
+    "displayName": "Data Analyst",
+    "password": "secure-password"
+  }'
+```
+
+Or use the seed demo user (`demo@feauxauth.local` / `password`) for testing.
+
+### Step 3: Configure the MCP Server
+
+The MCP server acts as a **resource server** — it validates tokens issued by FeauxAuth. Configuration depends on the MCP server implementation.
+
+**Spring Security-based MCP servers** (e.g., a Java/Spring Greenplum MCP server):
+
+```yaml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080
+          jwk-set-uri: http://localhost:8080/.well-known/jwks.json
+```
+
+**Generic MCP servers** need these FeauxAuth endpoints:
+
+| Purpose | URL |
+|---------|-----|
+| OIDC Discovery | `http://localhost:8080/.well-known/openid-configuration` |
+| JWKS (public keys) | `http://localhost:8080/.well-known/jwks.json` |
+| Issuer (for `iss` claim validation) | `http://localhost:8080` |
+
+The MCP server should also serve a **Protected Resource Metadata** document at `/.well-known/oauth-protected-resource` (per RFC 9728) so MCP clients can discover FeauxAuth automatically:
+
+```json
+{
+  "resource": "https://greenplum-mcp.example.com",
+  "authorization_servers": ["http://localhost:8080"],
+  "scopes_supported": ["openid", "profile", "email"],
+  "bearer_methods_supported": ["header"]
+}
+```
+
+### Step 4: Configure the MCP Client
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+For remote MCP servers with OAuth, the client discovers the auth server automatically through the MCP server's resource metadata. No FeauxAuth URL needed in the client config:
+
+```json
+{
+  "mcpServers": {
+    "greenplum": {
+      "url": "https://greenplum-mcp.example.com/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}
+```
+
+When Claude Desktop connects, it will:
+1. Receive a `401` from the MCP server
+2. Discover FeauxAuth via the server's `/.well-known/oauth-protected-resource`
+3. Open a browser window to FeauxAuth's login page
+4. Complete the PKCE authorization code flow
+5. Use the resulting JWT for all subsequent MCP requests
+
+### Token Verification
+
+MCP servers validate FeauxAuth JWTs by:
+
+1. **Fetching the public key** from `/.well-known/jwks.json`
+2. **Verifying the RS256 signature** using the key matching the token's `kid` header
+3. **Checking standard claims**: `iss` matches FeauxAuth's issuer URL, `exp` is in the future, `aud` matches the expected client
+
+Example decoded FeauxAuth access token payload:
+```json
+{
+  "iss": "http://localhost:8080",
+  "sub": "analyst@example.com",
+  "aud": "claude-desktop",
+  "exp": 1713045600,
+  "iat": 1713042000,
+  "jti": "a1b2c3d4-...",
+  "scope": "openid profile email",
+  "email": "analyst@example.com",
+  "name": "Data Analyst"
+}
+```
+
+### Docker Compose with an MCP Server
+
+To run FeauxAuth alongside an MCP server locally:
+
+```yaml
+services:
+  feauxauth:
+    build: ./FeauxAuth
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/feauxauth
+      DATABASE_USERNAME: feauxauth
+      DATABASE_PASSWORD: feauxauth
+      FEAUXAUTH_ISSUER: http://localhost:8080
+
+  your-mcp-server:
+    image: your-mcp-server:latest
+    ports:
+      - "9090:9090"
+    environment:
+      OAUTH_ISSUER_URI: http://feauxauth:8080
+      OAUTH_JWKS_URI: http://feauxauth:8080/.well-known/jwks.json
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: feauxauth
+      POSTGRES_USER: feauxauth
+      POSTGRES_PASSWORD: feauxauth
+```
+
+> **Note:** Inside Docker networking, the MCP server reaches FeauxAuth at `http://feauxauth:8080`. But the `FEAUXAUTH_ISSUER` must be set to the externally reachable URL (`http://localhost:8080`) since that's what appears in JWTs and must match what clients see.
+
 ## API Reference
 
 ### OIDC Discovery
