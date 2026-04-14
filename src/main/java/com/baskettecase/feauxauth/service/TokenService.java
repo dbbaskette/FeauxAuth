@@ -29,16 +29,29 @@ public class TokenService {
     private final AccessTokenRepository accessTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final String issuer;
+    private final List<String> extraAudiences;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public TokenService(KeyService keyService,
                         AccessTokenRepository accessTokenRepository,
                         RefreshTokenRepository refreshTokenRepository,
-                        @Value("${feauxauth.issuer}") String issuer) {
+                        @Value("${feauxauth.issuer}") String issuer,
+                        @Value("${feauxauth.extra-audiences:}") String extraAudiencesCsv) {
         this.keyService = keyService;
         this.accessTokenRepository = accessTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.issuer = issuer;
+        this.extraAudiences = Arrays.stream(extraAudiencesCsv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    private List<String> buildAudience(String clientId) {
+        List<String> aud = new ArrayList<>();
+        aud.add(clientId);
+        aud.addAll(extraAudiences);
+        return aud;
     }
 
     public String mintAccessToken(OAuthUser user, OAuthClient client, String scope) {
@@ -49,7 +62,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject(user.getEmail())
-                .audience(client.getClientId())
+                .audience(buildAudience(client.getClientId()))
                 .expirationTime(expiry)
                 .issueTime(now)
                 .jwtID(jti)
@@ -76,7 +89,7 @@ public class TokenService {
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject(client.getClientId())
-                .audience(client.getClientId())
+                .audience(buildAudience(client.getClientId()))
                 .expirationTime(expiry)
                 .issueTime(now)
                 .jwtID(jti)
@@ -96,7 +109,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject(user.getEmail())
-                .audience(client.getClientId())
+                .audience(buildAudience(client.getClientId()))
                 .expirationTime(expiry)
                 .issueTime(now)
                 .claim("email", user.getEmail())

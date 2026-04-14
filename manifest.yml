@@ -4,7 +4,7 @@ applications:
     disk_quota: 512M
     instances: 1
     buildpacks:
-      - java_buildpack
+      - java_buildpack_offline
     path: target/feauxauth-1.0.0.jar
     health-check-type: http
     health-check-http-endpoint: /.well-known/openid-configuration
@@ -12,6 +12,6 @@ applications:
       - feauxauth-db
     env:
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: changeme
+      ADMIN_PASSWORD: big0range
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
       SPRING_PROFILES_ACTIVE: cloud

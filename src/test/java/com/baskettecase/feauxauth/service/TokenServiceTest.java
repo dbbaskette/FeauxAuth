@@ -39,7 +39,7 @@ class TokenServiceTest {
     void setUp() throws Exception {
         rsaKey = new RSAKeyGenerator(2048).keyID("test-kid").generate();
         signer = new RSASSASigner(rsaKey);
-        tokenService = new TokenService(keyService, accessTokenRepository, refreshTokenRepository, "http://localhost:8080");
+        tokenService = new TokenService(keyService, accessTokenRepository, refreshTokenRepository, "http://localhost:8080", "");
     }
 
     @Test
