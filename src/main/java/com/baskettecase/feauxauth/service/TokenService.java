@@ -61,18 +61,31 @@ public class TokenService {
         if (scope.contains("profile")) {
             claimsBuilder.claim("name", user.getDisplayName());
         }
+        addRolesClaim(claimsBuilder, user.getRoles());
 
         String jwt = signJwt(claimsBuilder.build());
+        saveAccessToken(jti, client.getClientId(), user.getId(), scope, expiry);
+        return jwt;
+    }
 
-        AccessToken accessToken = new AccessToken();
-        accessToken.setJti(jti);
-        accessToken.setClientId(client.getClientId());
-        accessToken.setUserId(user.getId());
-        accessToken.setScope(scope);
-        accessToken.setExpiresAt(LocalDateTime.ofInstant(expiry.toInstant(), ZoneOffset.UTC));
-        accessToken.setCreatedAt(LocalDateTime.now());
-        accessTokenRepository.save(accessToken);
+    public String mintClientAccessToken(OAuthClient client, String scope) {
+        String jti = UUID.randomUUID().toString();
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
 
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .issuer(issuer)
+                .subject(client.getClientId())
+                .audience(client.getClientId())
+                .expirationTime(expiry)
+                .issueTime(now)
+                .jwtID(jti)
+                .claim("scope", scope)
+                .claim("client_id", client.getClientId())
+                .build();
+
+        String jwt = signJwt(claims);
+        saveAccessToken(jti, client.getClientId(), null, scope, expiry);
         return jwt;
     }
 
@@ -89,11 +102,36 @@ public class TokenService {
                 .claim("email", user.getEmail())
                 .claim("name", user.getDisplayName());
 
+        addRolesClaim(claimsBuilder, user.getRoles());
+
         if (nonce != null && !nonce.isBlank()) {
             claimsBuilder.claim("nonce", nonce);
         }
 
         return signJwt(claimsBuilder.build());
+    }
+
+    private void saveAccessToken(String jti, String clientId, UUID userId, String scope, Date expiry) {
+        AccessToken accessToken = new AccessToken();
+        accessToken.setJti(jti);
+        accessToken.setClientId(clientId);
+        accessToken.setUserId(userId);
+        accessToken.setScope(scope);
+        accessToken.setExpiresAt(LocalDateTime.ofInstant(expiry.toInstant(), ZoneOffset.UTC));
+        accessToken.setCreatedAt(LocalDateTime.now());
+        accessTokenRepository.save(accessToken);
+    }
+
+    private void addRolesClaim(JWTClaimsSet.Builder builder, String roles) {
+        if (roles != null && !roles.isBlank()) {
+            List<String> roleList = Arrays.stream(roles.split(","))
+                    .map(String::trim)
+                    .filter(r -> !r.isEmpty())
+                    .toList();
+            if (!roleList.isEmpty()) {
+                builder.claim("roles", roleList);
+            }
+        }
     }
 
     private String signJwt(JWTClaimsSet claims) {

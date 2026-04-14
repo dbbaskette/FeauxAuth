@@ -30,7 +30,10 @@ public class WellKnownController {
         config.put("revocation_endpoint", issuer + "/oauth/revoke");
         config.put("jwks_uri", issuer + "/.well-known/jwks.json");
         config.put("response_types_supported", List.of("code"));
-        config.put("grant_types_supported", List.of("authorization_code", "refresh_token"));
+        config.put("end_session_endpoint", issuer + "/oauth/logout");
+        config.put("introspection_endpoint", issuer + "/oauth/introspect");
+        config.put("registration_endpoint", issuer + "/oauth/register");
+        config.put("grant_types_supported", List.of("authorization_code", "refresh_token", "client_credentials"));
         config.put("subject_types_supported", List.of("public"));
         config.put("id_token_signing_alg_values_supported", List.of("RS256"));
         config.put("scopes_supported", List.of("openid", "profile", "email", "offline_access"));

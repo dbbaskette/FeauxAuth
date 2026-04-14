@@ -11,6 +11,7 @@ export default function UserForm() {
     email: '',
     displayName: '',
     password: '',
+    roles: '',
     enabled: true,
   })
 
@@ -21,6 +22,7 @@ export default function UserForm() {
           email: data.email,
           displayName: data.displayName,
           password: '',
+          roles: data.roles || '',
           enabled: data.enabled,
         })
       })
@@ -55,6 +57,13 @@ export default function UserForm() {
           <input type="text" value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
                  required
                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Roles (comma-separated)</label>
+          <input type="text" value={form.roles} onChange={e => setForm(f => ({ ...f, roles: e.target.value }))}
+                 placeholder="admin,editor,viewer"
+                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
 
         {!isEdit && (

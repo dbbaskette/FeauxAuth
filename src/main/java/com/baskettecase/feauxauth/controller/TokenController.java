@@ -25,6 +25,7 @@ public class TokenController {
 
     private static final String GRANT_AUTHORIZATION_CODE = "authorization_code";
     private static final String GRANT_REFRESH_TOKEN = "refresh_token";
+    private static final String GRANT_CLIENT_CREDENTIALS = "client_credentials";
 
     private final AuthCodeService authCodeService;
     private final TokenService tokenService;
@@ -41,7 +42,8 @@ public class TokenController {
             @RequestParam("client_id") String clientId,
             @RequestParam(value = "client_secret", required = false) String clientSecret,
             @RequestParam(value = "code_verifier", required = false) String codeVerifier,
-            @RequestParam(value = "refresh_token", required = false) String refreshTokenValue) {
+            @RequestParam(value = "refresh_token", required = false) String refreshTokenValue,
+            @RequestParam(value = "scope", required = false) String scope) {
 
         Optional<OAuthClient> clientOpt = clientService.findByClientId(clientId);
         if (clientOpt.isEmpty() || !clientOpt.get().isEnabled()) {
@@ -49,8 +51,9 @@ public class TokenController {
         }
         OAuthClient client = clientOpt.get();
 
-        // Public clients use PKCE; confidential clients must provide valid client_secret
-        if (!client.isRequirePkce()) {
+        // Client credentials and confidential clients always require client_secret
+        boolean secretRequired = GRANT_CLIENT_CREDENTIALS.equals(grantType) || !client.isRequirePkce();
+        if (secretRequired) {
             if (clientSecret == null || !clientService.verifySecret(client, clientSecret)) {
                 return errorResponse("invalid_client", "Invalid client credentials");
             }
@@ -60,8 +63,10 @@ public class TokenController {
             return handleAuthorizationCode(client, code, redirectUri, codeVerifier);
         } else if (GRANT_REFRESH_TOKEN.equals(grantType)) {
             return handleRefreshToken(client, refreshTokenValue);
+        } else if (GRANT_CLIENT_CREDENTIALS.equals(grantType)) {
+            return handleClientCredentials(client, scope);
         } else {
-            return errorResponse("unsupported_grant_type", "Supported: authorization_code, refresh_token");
+            return errorResponse("unsupported_grant_type", "Supported: authorization_code, refresh_token, client_credentials");
         }
     }
 
@@ -131,6 +136,17 @@ public class TokenController {
         OAuthUser user = userOpt.get();
 
         Map<String, Object> response = buildTokenResponse(user, client, rt.getScope(), null, refreshTokenValue);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<?> handleClientCredentials(OAuthClient client, String scope) {
+        String effectiveScope = (scope != null && !scope.isBlank()) ? scope : client.getAllowedScopes();
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("access_token", tokenService.mintClientAccessToken(client, effectiveScope));
+        response.put("token_type", "Bearer");
+        response.put("expires_in", client.getAccessTokenTtl());
 
         return ResponseEntity.ok(response);
     }

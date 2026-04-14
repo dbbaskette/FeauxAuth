@@ -49,14 +49,12 @@ public class SecurityConfig {
                 .securityMatcher("/**")
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/.well-known/**").permitAll()
-                        .requestMatchers("/oauth/authorize").permitAll()
-                        .requestMatchers("/oauth/token").permitAll()
-                        .requestMatchers("/oauth/revoke").permitAll()
-                        .requestMatchers("/oauth/userinfo").permitAll()
+                        .requestMatchers("/oauth/**").permitAll()
                         .requestMatchers("/admin/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().permitAll()
                 )
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
         return http.build();

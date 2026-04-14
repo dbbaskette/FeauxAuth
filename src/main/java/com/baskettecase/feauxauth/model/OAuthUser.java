@@ -31,6 +31,9 @@ public class OAuthUser {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column(length = 1024)
+    private String roles = "";
+
     @PrePersist
     public void prePersist() {
         if (id == null) id = UUID.randomUUID();

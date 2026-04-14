@@ -16,7 +16,7 @@ public class AccessToken {
     @Column(name = "client_id", nullable = false)
     private String clientId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private UUID userId;
 
     @Column(nullable = false)

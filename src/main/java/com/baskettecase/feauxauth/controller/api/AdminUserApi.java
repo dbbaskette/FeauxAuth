@@ -35,7 +35,8 @@ public class AdminUserApi {
         String email = body.get("email");
         String displayName = body.get("displayName");
         String password = body.get("password");
-        OAuthUser user = userService.create(email, displayName, password);
+        String roles = body.getOrDefault("roles", "");
+        OAuthUser user = userService.create(email, displayName, password, roles);
         return ResponseEntity.ok(user);
     }
 
@@ -50,6 +51,7 @@ public class AdminUserApi {
         if (body.containsKey("email")) user.setEmail((String) body.get("email"));
         if (body.containsKey("displayName")) user.setDisplayName((String) body.get("displayName"));
         if (body.containsKey("enabled")) user.setEnabled((Boolean) body.get("enabled"));
+        if (body.containsKey("roles")) user.setRoles((String) body.get("roles"));
 
         return ResponseEntity.ok(userService.update(user));
     }

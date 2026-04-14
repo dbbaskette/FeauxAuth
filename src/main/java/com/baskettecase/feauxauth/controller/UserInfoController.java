@@ -55,6 +55,11 @@ public class UserInfoController {
             profile.put("name", user.getDisplayName());
         }
 
+        if (user.getRoles() != null && !user.getRoles().isBlank()) {
+            profile.put("roles", java.util.Arrays.stream(user.getRoles().split(","))
+                    .map(String::trim).filter(r -> !r.isEmpty()).toList());
+        }
+
         return ResponseEntity.ok(profile);
     }
 }

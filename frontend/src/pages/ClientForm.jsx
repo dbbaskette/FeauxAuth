@@ -15,6 +15,7 @@ export default function ClientForm() {
     accessTokenTtl: 3600,
     refreshTokenTtl: 2592000,
     requirePkce: false,
+    requireConsent: false,
     enabled: true,
   })
   const [secret, setSecret] = useState(null)
@@ -30,6 +31,7 @@ export default function ClientForm() {
           accessTokenTtl: data.accessTokenTtl,
           refreshTokenTtl: data.refreshTokenTtl,
           requirePkce: data.requirePkce,
+          requireConsent: data.requireConsent || false,
           enabled: data.enabled,
         })
       })
@@ -142,6 +144,11 @@ export default function ClientForm() {
             <input type="checkbox" checked={form.requirePkce} onChange={e => setForm(f => ({ ...f, requirePkce: e.target.checked }))}
                    className="rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500" />
             <span className="text-sm text-gray-300">Require PKCE</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input type="checkbox" checked={form.requireConsent} onChange={e => setForm(f => ({ ...f, requireConsent: e.target.checked }))}
+                   className="rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500" />
+            <span className="text-sm text-gray-300">Require Consent</span>
           </label>
           <label className="flex items-center space-x-2">
             <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}

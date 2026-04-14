@@ -37,6 +37,9 @@ public class OAuthClient {
     @Column(name = "require_pkce", nullable = false)
     private boolean requirePkce = false;
 
+    @Column(name = "require_consent", nullable = false)
+    private boolean requireConsent = false;
+
     @Column(nullable = false)
     private boolean enabled = true;
 

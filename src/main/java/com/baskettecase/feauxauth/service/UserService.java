@@ -30,11 +30,12 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
-    public OAuthUser create(String email, String displayName, String password) {
+    public OAuthUser create(String email, String displayName, String password, String roles) {
         OAuthUser user = new OAuthUser();
         user.setEmail(email);
         user.setDisplayName(displayName);
         user.setPasswordHash(passwordEncoder.encode(password));
+        user.setRoles(roles != null ? roles : "");
         return userRepository.save(user);
     }
 

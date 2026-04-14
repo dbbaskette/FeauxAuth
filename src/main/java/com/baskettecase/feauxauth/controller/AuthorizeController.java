@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Arrays;
-import java.util.Optional;
+import java.util.*;
 
 @Controller
 @RequiredArgsConstructor
@@ -111,21 +110,89 @@ public class AuthorizeController {
         OAuthUser user = userOpt.get();
         userService.recordLogin(user);
 
-        String code = authCodeService.generateCode(clientId, user.getId(), redirectUri, scope, codeChallenge, nonce);
+        // Check if client requires consent
+        Optional<OAuthClient> clientOpt = clientService.findByClientId(clientId);
+        if (clientOpt.isPresent() && clientOpt.get().isRequireConsent()) {
+            session.setAttribute("auth_user_id", user.getId().toString());
+            model.addAttribute("clientName", clientOpt.get().getName());
+            model.addAttribute("userEmail", user.getEmail());
+            model.addAttribute("scopeDescriptions", describeScopeItems(scope));
+            return "oauth/consent";
+        }
 
-        session.removeAttribute("auth_client_id");
-        session.removeAttribute("auth_redirect_uri");
-        session.removeAttribute("auth_scope");
-        session.removeAttribute("auth_state");
-        session.removeAttribute("auth_code_challenge");
-        session.removeAttribute("auth_nonce");
+        return issueCodeAndRedirect(clientId, user.getId(), redirectUri, scope, state, codeChallenge, nonce, session);
+    }
+
+    @PostMapping("/oauth/consent")
+    public String consent(
+            @RequestParam("approve") String approve,
+            HttpSession session,
+            Model model) {
+
+        String clientId = (String) session.getAttribute("auth_client_id");
+        String redirectUri = (String) session.getAttribute("auth_redirect_uri");
+        String scope = (String) session.getAttribute("auth_scope");
+        String state = (String) session.getAttribute("auth_state");
+        String codeChallenge = (String) session.getAttribute("auth_code_challenge");
+        String nonce = (String) session.getAttribute("auth_nonce");
+        String userIdStr = (String) session.getAttribute("auth_user_id");
+
+        if (clientId == null || redirectUri == null || userIdStr == null) {
+            model.addAttribute("error", "invalid_request");
+            model.addAttribute("errorDescription", "Session expired. Please start the login flow again.");
+            return "oauth/error";
+        }
+
+        if (!"true".equals(approve)) {
+            clearAuthSession(session);
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(redirectUri)
+                    .queryParam("error", "access_denied")
+                    .queryParam("error_description", "User denied the authorization request");
+            if (state != null) {
+                builder.queryParam("state", state);
+            }
+            return "redirect:" + builder.toUriString();
+        }
+
+        UUID userId = UUID.fromString(userIdStr);
+        return issueCodeAndRedirect(clientId, userId, redirectUri, scope, state, codeChallenge, nonce, session);
+    }
+
+    private String issueCodeAndRedirect(String clientId, UUID userId, String redirectUri,
+                                         String scope, String state, String codeChallenge, String nonce,
+                                         HttpSession session) {
+        String code = authCodeService.generateCode(clientId, userId, redirectUri, scope, codeChallenge, nonce);
+        clearAuthSession(session);
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("code", code);
         if (state != null) {
             builder.queryParam("state", state);
         }
-
         return "redirect:" + builder.toUriString();
+    }
+
+    private void clearAuthSession(HttpSession session) {
+        session.removeAttribute("auth_client_id");
+        session.removeAttribute("auth_redirect_uri");
+        session.removeAttribute("auth_scope");
+        session.removeAttribute("auth_state");
+        session.removeAttribute("auth_code_challenge");
+        session.removeAttribute("auth_nonce");
+        session.removeAttribute("auth_user_id");
+    }
+
+    private static final Map<String, String> SCOPE_DESCRIPTIONS = Map.of(
+            "openid", "Verify your identity",
+            "profile", "Access your name and display name",
+            "email", "Access your email address",
+            "offline_access", "Stay signed in with a refresh token"
+    );
+
+    private List<String> describeScopeItems(String scope) {
+        if (scope == null) return List.of();
+        return Arrays.stream(scope.split("\\s+"))
+                .map(s -> SCOPE_DESCRIPTIONS.getOrDefault(s, "Access: " + s))
+                .toList();
     }
 }

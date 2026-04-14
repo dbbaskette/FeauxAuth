@@ -13,10 +13,16 @@ public class AppConfig {
     private String issuer = "http://localhost:8080";
 
     private Admin admin = new Admin();
+    private Cors cors = new Cors();
 
     @Getter @Setter
     public static class Admin {
         private String username = "admin";
         private String password = "feauxauth";
+    }
+
+    @Getter @Setter
+    public static class Cors {
+        private String allowedOrigins = "*";
     }
 }
