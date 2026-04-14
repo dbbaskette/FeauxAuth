@@ -34,9 +34,14 @@ public class WellKnownController {
         config.put("subject_types_supported", List.of("public"));
         config.put("id_token_signing_alg_values_supported", List.of("RS256"));
         config.put("scopes_supported", List.of("openid", "profile", "email", "offline_access"));
-        config.put("token_endpoint_auth_methods_supported", List.of("client_secret_post", "client_secret_basic"));
+        config.put("token_endpoint_auth_methods_supported", List.of("none", "client_secret_post", "client_secret_basic"));
         config.put("code_challenge_methods_supported", List.of("S256"));
         return config;
+    }
+
+    @GetMapping(value = "/.well-known/oauth-authorization-server", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> oauthAuthorizationServer() {
+        return openIdConfiguration();
     }
 
     @GetMapping(value = "/.well-known/jwks.json", produces = MediaType.APPLICATION_JSON_VALUE)
