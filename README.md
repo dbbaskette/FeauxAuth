@@ -1,8 +1,28 @@
 # FeauxAuth
 
+[![Java 21](https://img.shields.io/badge/Java-21-blue)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot 3.4](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED)](docker-compose.yml)
+
 A lightweight OAuth 2.0 / OIDC authorization server built for lab and demo environments. FeauxAuth gives you a fully functional auth server with a React admin UI — deploy it locally with Docker or push it to Cloud Foundry in minutes.
 
 > **Not for production use.** FeauxAuth is designed for development, testing, and demos where you need a real OAuth server without the overhead of Keycloak, Auth0, or Spring Authorization Server.
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [Using FeauxAuth with MCP Servers](#using-feauxauth-with-mcp-servers)
+- [API Reference](#api-reference)
+- [Configuration](#configuration)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Licence](#licence)
+- [Acknowledgements](#acknowledgements)
 
 ## Features
 
@@ -521,6 +541,7 @@ All configuration is via environment variables:
 | `ADMIN_USERNAME` | `admin` | Admin UI / API username |
 | `ADMIN_PASSWORD` | `feauxauth` | Admin UI / API password |
 | `FEAUXAUTH_CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed CORS origins for OAuth/OIDC endpoints |
+| `FEAUXAUTH_EXTRA_AUDIENCES` | *(empty)* | Comma-separated extra `aud` values to include in JWT access tokens |
 
 ## Tech Stack
 
@@ -583,9 +604,21 @@ mvn test
 
 Tests include unit tests for PKCE and token services, plus integration tests covering the full OAuth authorization code flow.
 
+## Contributing
+
+Contributions are welcome! To get started:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Make your changes and add tests where appropriate
+4. Run `mvn test` to ensure all tests pass
+5. Commit your changes and open a pull request
+
+Please report bugs and suggest features via [GitHub Issues](https://github.com/dbbaskette/FeauxAuth/issues).
+
 ## Licence
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
 
 ## Acknowledgements
 
