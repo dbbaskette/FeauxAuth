@@ -1,6 +1,7 @@
 package com.baskettecase.feauxauth.controller;
 
 import com.baskettecase.feauxauth.model.AuthCode;
+import com.baskettecase.feauxauth.model.DeviceCode;
 import com.baskettecase.feauxauth.model.OAuthClient;
 import com.baskettecase.feauxauth.model.OAuthUser;
 import com.baskettecase.feauxauth.model.RefreshToken;
@@ -26,11 +27,13 @@ public class TokenController {
     private static final String GRANT_AUTHORIZATION_CODE = "authorization_code";
     private static final String GRANT_REFRESH_TOKEN = "refresh_token";
     private static final String GRANT_CLIENT_CREDENTIALS = "client_credentials";
+    private static final String GRANT_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
 
     private final AuthCodeService authCodeService;
     private final TokenService tokenService;
     private final ClientService clientService;
     private final PkceService pkceService;
+    private final DeviceCodeService deviceCodeService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
 
@@ -43,7 +46,8 @@ public class TokenController {
             @RequestParam(value = "client_secret", required = false) String clientSecret,
             @RequestParam(value = "code_verifier", required = false) String codeVerifier,
             @RequestParam(value = "refresh_token", required = false) String refreshTokenValue,
-            @RequestParam(value = "scope", required = false) String scope) {
+            @RequestParam(value = "scope", required = false) String scope,
+            @RequestParam(value = "device_code", required = false) String deviceCode) {
 
         Optional<OAuthClient> clientOpt = clientService.findByClientId(clientId);
         if (clientOpt.isEmpty() || !clientOpt.get().isEnabled()) {
@@ -51,8 +55,15 @@ public class TokenController {
         }
         OAuthClient client = clientOpt.get();
 
-        // Client credentials and confidential clients always require client_secret
-        boolean secretRequired = GRANT_CLIENT_CREDENTIALS.equals(grantType) || !client.isRequirePkce();
+        boolean secretRequired;
+        if (GRANT_CLIENT_CREDENTIALS.equals(grantType)) {
+            secretRequired = true;
+        } else if (GRANT_DEVICE_CODE.equals(grantType)) {
+            // Device-flow clients are public by design (RFC 8628 §3.1).
+            secretRequired = false;
+        } else {
+            secretRequired = !client.isRequirePkce();
+        }
         if (secretRequired) {
             if (clientSecret == null || !clientService.verifySecret(client, clientSecret)) {
                 return errorResponse("invalid_client", "Invalid client credentials");
@@ -65,8 +76,11 @@ public class TokenController {
             return handleRefreshToken(client, refreshTokenValue);
         } else if (GRANT_CLIENT_CREDENTIALS.equals(grantType)) {
             return handleClientCredentials(client, scope);
+        } else if (GRANT_DEVICE_CODE.equals(grantType)) {
+            return handleDeviceCode(client, deviceCode);
         } else {
-            return errorResponse("unsupported_grant_type", "Supported: authorization_code, refresh_token, client_credentials");
+            return errorResponse("unsupported_grant_type",
+                    "Supported: authorization_code, refresh_token, client_credentials, urn:ietf:params:oauth:grant-type:device_code");
         }
     }
 
@@ -138,6 +152,60 @@ public class TokenController {
         Map<String, Object> response = buildTokenResponse(user, client, rt.getScope(), null, refreshTokenValue);
 
         return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<?> handleDeviceCode(OAuthClient client, String deviceCode) {
+        if (deviceCode == null || deviceCode.isBlank()) {
+            return errorResponse("invalid_request", "Missing device_code parameter");
+        }
+
+        Optional<DeviceCode> dcOpt = deviceCodeService.findByDeviceCode(deviceCode);
+        if (dcOpt.isEmpty()) {
+            return errorResponse("invalid_grant", "Unknown device code");
+        }
+        DeviceCode dc = dcOpt.get();
+
+        if (!dc.getClientId().equals(client.getClientId())) {
+            return errorResponse("invalid_grant", "Device code was not issued to this client");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // RFC 8628 §3.5 — slow_down. Always update last_polled_at so we measure
+        // the gap from the last poll, not the last accepted poll.
+        if (dc.getLastPolledAt() != null
+                && now.isBefore(dc.getLastPolledAt().plusSeconds(dc.getIntervalSeconds()))) {
+            deviceCodeService.recordPoll(dc);
+            return errorResponse("slow_down", "Polling too fast. Increase interval by 5 seconds.");
+        }
+        deviceCodeService.recordPoll(dc);
+
+        if (dc.getExpiresAt().isBefore(now)) {
+            return errorResponse("expired_token", "Device code has expired");
+        }
+
+        switch (dc.getStatus()) {
+            case DeviceCode.STATUS_PENDING:
+                return errorResponse("authorization_pending", "User has not yet completed authentication");
+            case DeviceCode.STATUS_DENIED:
+                return errorResponse("access_denied", "User denied the authorization request");
+            case DeviceCode.STATUS_CONSUMED:
+                return errorResponse("invalid_grant", "Device code has already been used");
+            case DeviceCode.STATUS_APPROVED:
+                break;
+            default:
+                return errorResponse("invalid_grant", "Unknown device code status");
+        }
+
+        Optional<OAuthUser> userOpt = userRepository.findById(dc.getUserId());
+        if (userOpt.isEmpty() || !userOpt.get().isEnabled()) {
+            return errorResponse("invalid_grant", "User not found or disabled");
+        }
+        OAuthUser user = userOpt.get();
+
+        deviceCodeService.markConsumed(dc);
+
+        return ResponseEntity.ok(buildTokenResponse(user, client, dc.getScope(), null, null));
     }
 
     private ResponseEntity<?> handleClientCredentials(OAuthClient client, String scope) {

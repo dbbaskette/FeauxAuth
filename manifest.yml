@@ -1,6 +1,6 @@
 applications:
   - name: feauxauth
-    memory: 512M
+    memory: 1G
     disk_quota: 512M
     instances: 1
     buildpacks:
@@ -13,5 +13,8 @@ applications:
     env:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: big0range
+      # 1G total leaves ~330M for the JVM heap after the java buildpack's
+      # fixed reservations (code cache + metaspace + 250 thread stacks).
+      # 512M is below that floor and the JVM refuses to start.
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
       SPRING_PROFILES_ACTIVE: cloud

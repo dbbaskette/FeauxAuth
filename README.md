@@ -28,6 +28,7 @@ A lightweight OAuth 2.0 / OIDC authorization server built for lab and demo envir
 
 - **OAuth 2.0 Authorization Code** flow with optional **PKCE**
 - **Client Credentials** grant for machine-to-machine authentication
+- **Device Authorization Grant** ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) for input-constrained or headless clients
 - **OpenID Connect** discovery, ID tokens, userinfo, nonce, and logout
 - **JWT access tokens** signed with RS256 (RSA-2048), auto-generated signing keys
 - **User roles** — comma-separated roles included as JSON array in JWT claims
@@ -224,7 +225,54 @@ Response:
 
 The token's `sub` claim is the `client_id` (no user). Client secret is always required for this grant type, regardless of PKCE settings.
 
-### 6. Token Introspection
+### 6. Device Authorization (RFC 8628)
+
+For input-constrained or headless clients (CLI tools, IoT devices, agents running inside containers without a callback URL), use the device authorization grant. The device receives a short user code and asks the user to enter it in a browser on a separate device:
+
+```bash
+# Step 1 — device requests a code
+curl -X POST http://localhost:8080/oauth/device_authorization \
+  -d "client_id=demo-app" \
+  -d "scope=openid profile email"
+```
+
+Response:
+```json
+{
+  "device_code": "tZiiVG0jKJCbfNh5FyRoMAxxYR5C-nGWhnRbGm7YmF0",
+  "user_code": "VBMD-NJMT",
+  "verification_uri": "http://localhost:8080/device",
+  "verification_uri_complete": "http://localhost:8080/device?user_code=VBMD-NJMT",
+  "expires_in": 600,
+  "interval": 5
+}
+```
+
+The device displays the `user_code` and either `verification_uri` or `verification_uri_complete` to the user. The user opens the URL on a phone or laptop and signs in.
+
+```bash
+# Step 2 — device polls the token endpoint until the user completes login
+curl -X POST http://localhost:8080/oauth/token \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+  -d "client_id=demo-app" \
+  -d "device_code=tZiiVG0jKJCbfNh5FyRoMAxxYR5C-nGWhnRbGm7YmF0"
+```
+
+Standard polling errors per RFC 8628 §3.5:
+
+| Error | Meaning |
+|---|---|
+| `authorization_pending` | User has not completed authentication. Continue polling at `interval`. |
+| `slow_down` | Polling too fast. Increase the interval by 5 seconds. |
+| `expired_token` | Device code expired. Restart with a fresh `/oauth/device_authorization` request. |
+| `access_denied` | User clicked Cancel on the verification page. |
+| `invalid_grant` | Device code unknown, already consumed, or issued to a different client. |
+
+On success the response is the standard token response (access_token, refresh_token if scope includes `offline_access`, id_token if scope includes `openid`).
+
+The verification page is at `/device`. Users can either type the code manually or follow `verification_uri_complete` to skip the code-entry step.
+
+### 7. Token Introspection
 
 Resource servers can validate tokens without parsing JWTs themselves:
 
@@ -250,7 +298,7 @@ Active token response:
 
 Expired, revoked, or invalid tokens return `{"active": false}` (HTTP 200, per RFC 7662).
 
-### 7. Logout
+### 8. Logout
 
 OIDC RP-Initiated Logout:
 
@@ -260,7 +308,7 @@ GET http://localhost:8080/oauth/logout?id_token_hint=eyJ...&post_logout_redirect
 
 This revokes all tokens for the user identified by the `id_token_hint`, invalidates the session, and redirects to the `post_logout_redirect_uri`. Without a redirect URI, a "Signed Out" confirmation page is shown.
 
-### 8. User Roles in Tokens
+### 9. User Roles in Tokens
 
 When users have roles assigned (e.g., `admin,editor`), they appear as a JSON array in JWT claims:
 
@@ -475,7 +523,10 @@ services:
 | GET | `/oauth/authorize` | None | Renders login page |
 | POST | `/oauth/authorize` | Session | Processes login, shows consent or redirects with auth code |
 | POST | `/oauth/consent` | Session | Processes consent approval/denial |
-| POST | `/oauth/token` | Client credentials or PKCE | Exchanges code, refresh token, or client credentials for tokens |
+| POST | `/oauth/token` | Client credentials or PKCE | Exchanges code, refresh token, client credentials, or device code for tokens |
+| POST | `/oauth/device_authorization` | None | Issues a device + user code (RFC 8628 device authorization grant) |
+| GET | `/device` | None | Verification page where users enter the user code shown on their device |
+| POST | `/device` | Session | Approves or denies a device authorization by signing in |
 | GET | `/oauth/userinfo` | Bearer token | Returns user claims (includes roles) |
 | POST | `/oauth/revoke` | None | Revokes an access or refresh token |
 | POST | `/oauth/introspect` | None | Token introspection (RFC 7662) |
