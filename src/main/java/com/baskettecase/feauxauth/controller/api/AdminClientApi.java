@@ -37,9 +37,10 @@ public class AdminClientApi {
         int refreshTokenTtl = ((Number) body.getOrDefault("refreshTokenTtl", 2592000)).intValue();
         boolean requirePkce = (Boolean) body.getOrDefault("requirePkce", false);
         boolean requireConsent = (Boolean) body.getOrDefault("requireConsent", false);
+        String roles = (String) body.getOrDefault("roles", "");
 
         Map<String, Object> result = clientService.create(name, clientId, redirectUris,
-                allowedScopes, accessTokenTtl, refreshTokenTtl, requirePkce, requireConsent);
+                allowedScopes, accessTokenTtl, refreshTokenTtl, requirePkce, requireConsent, roles);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("client", result.get("client"));
@@ -64,6 +65,7 @@ public class AdminClientApi {
         if (body.containsKey("requirePkce")) client.setRequirePkce((Boolean) body.get("requirePkce"));
         if (body.containsKey("requireConsent")) client.setRequireConsent((Boolean) body.get("requireConsent"));
         if (body.containsKey("enabled")) client.setEnabled((Boolean) body.get("enabled"));
+        if (body.containsKey("roles")) client.setRoles((String) body.get("roles"));
 
         return ResponseEntity.ok(clientService.update(client));
     }

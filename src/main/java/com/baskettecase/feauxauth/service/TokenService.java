@@ -86,7 +86,7 @@ public class TokenService {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + (long) client.getAccessTokenTtl() * 1000);
 
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject(client.getClientId())
                 .audience(buildAudience(client.getClientId()))
@@ -94,10 +94,11 @@ public class TokenService {
                 .issueTime(now)
                 .jwtID(jti)
                 .claim("scope", scope)
-                .claim("client_id", client.getClientId())
-                .build();
+                .claim("client_id", client.getClientId());
 
-        String jwt = signJwt(claims);
+        addRolesClaim(claimsBuilder, client.getRoles());
+
+        String jwt = signJwt(claimsBuilder.build());
         saveAccessToken(jti, client.getClientId(), null, scope, expiry);
         return jwt;
     }

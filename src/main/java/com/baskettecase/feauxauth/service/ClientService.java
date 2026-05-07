@@ -31,7 +31,7 @@ public class ClientService {
 
     public Map<String, Object> create(String name, String clientId, String redirectUris,
                                        String allowedScopes, int accessTokenTtl, int refreshTokenTtl,
-                                       boolean requirePkce, boolean requireConsent) {
+                                       boolean requirePkce, boolean requireConsent, String roles) {
         String plainSecret = generateSecret();
 
         OAuthClient client = new OAuthClient();
@@ -44,6 +44,7 @@ public class ClientService {
         client.setRefreshTokenTtl(refreshTokenTtl);
         client.setRequirePkce(requirePkce);
         client.setRequireConsent(requireConsent);
+        client.setRoles(roles == null ? "" : roles);
 
         clientRepository.save(client);
 

@@ -43,6 +43,9 @@ public class OAuthClient {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(length = 1024)
+    private String roles = "";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

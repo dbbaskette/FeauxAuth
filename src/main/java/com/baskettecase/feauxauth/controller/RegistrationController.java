@@ -52,7 +52,7 @@ public class RegistrationController {
 
         Map<String, Object> result = clientService.create(
                 clientName, clientId, redirectUris, scope,
-                3600, 2592000, requirePkce, false);
+                3600, 2592000, requirePkce, false, "");
 
         OAuthClient client = (OAuthClient) result.get("client");
         String plainSecret = (String) result.get("plainSecret");
