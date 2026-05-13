@@ -2,10 +2,15 @@ package com.baskettecase.feauxauth.controller;
 
 import com.baskettecase.feauxauth.model.OAuthClient;
 import com.baskettecase.feauxauth.model.OAuthUser;
+import com.baskettecase.feauxauth.oauth.OAuthErrorHints;
 import com.baskettecase.feauxauth.oauth.ScopeRisk;
 import com.baskettecase.feauxauth.service.AuthCodeService;
 import com.baskettecase.feauxauth.service.ClientService;
 import com.baskettecase.feauxauth.service.UserService;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -39,16 +44,12 @@ public class AuthorizeController {
             Model model) {
 
         if (!"code".equals(responseType)) {
-            model.addAttribute("error", "unsupported_response_type");
-            model.addAttribute("errorDescription", "Only response_type=code is supported");
-            return "oauth/error";
+            return renderError(model, "unsupported_response_type", "Only response_type=code is supported");
         }
 
         Optional<OAuthClient> clientOpt = clientService.findByClientId(clientId);
         if (clientOpt.isEmpty() || !clientOpt.get().isEnabled()) {
-            model.addAttribute("error", "invalid_client");
-            model.addAttribute("errorDescription", "Unknown or disabled client");
-            return "oauth/error";
+            return renderError(model, "invalid_client", "Unknown or disabled client");
         }
 
         OAuthClient client = clientOpt.get();
@@ -57,15 +58,11 @@ public class AuthorizeController {
                 .map(String::trim)
                 .anyMatch(uri -> uri.equals(redirectUri));
         if (!validRedirect) {
-            model.addAttribute("error", "invalid_redirect_uri");
-            model.addAttribute("errorDescription", "Redirect URI not registered for this client");
-            return "oauth/error";
+            return renderError(model, "invalid_redirect_uri", "Redirect URI not registered for this client");
         }
 
         if (client.isRequirePkce() && (codeChallenge == null || codeChallenge.isBlank())) {
-            model.addAttribute("error", "invalid_request");
-            model.addAttribute("errorDescription", "This client requires PKCE (code_challenge)");
-            return "oauth/error";
+            return renderError(model, "invalid_request", "This client requires PKCE (code_challenge)");
         }
 
         session.setAttribute("auth_client_id", clientId);
@@ -95,9 +92,7 @@ public class AuthorizeController {
         String nonce = (String) session.getAttribute("auth_nonce");
 
         if (clientId == null || redirectUri == null) {
-            model.addAttribute("error", "invalid_request");
-            model.addAttribute("errorDescription", "Session expired. Please start the login flow again.");
-            return "oauth/error";
+            return renderError(model, "invalid_request", "Session expired. Please start the login flow again.");
         }
 
         Optional<OAuthUser> userOpt = userService.findByEmail(email);
@@ -116,6 +111,8 @@ public class AuthorizeController {
         if (clientOpt.isPresent() && clientOpt.get().isRequireConsent()) {
             session.setAttribute("auth_user_id", user.getId().toString());
             model.addAttribute("clientName", clientOpt.get().getName());
+            model.addAttribute("clientInitial", clientInitial(clientOpt.get().getName()));
+            model.addAttribute("redirectHost", hostOf(redirectUri));
             model.addAttribute("userEmail", user.getEmail());
             model.addAttribute("scopeItems", buildScopeItems(scope));
             return "oauth/consent";
@@ -139,9 +136,7 @@ public class AuthorizeController {
         String userIdStr = (String) session.getAttribute("auth_user_id");
 
         if (clientId == null || redirectUri == null || userIdStr == null) {
-            model.addAttribute("error", "invalid_request");
-            model.addAttribute("errorDescription", "Session expired. Please start the login flow again.");
-            return "oauth/error";
+            return renderError(model, "invalid_request", "Session expired. Please start the login flow again.");
         }
 
         if (!"true".equals(approve)) {
@@ -208,5 +203,27 @@ public class AuthorizeController {
                         ScopeRisk.classify(s).cssToken(),
                         SCOPE_DESCRIPTIONS.getOrDefault(s, "Access: " + s)))
                 .toList();
+    }
+
+    private String renderError(Model model, String code, String description) {
+        model.addAttribute("error", code);
+        model.addAttribute("errorDescription", description);
+        model.addAttribute("errorHint", OAuthErrorHints.hint(code));
+        return "oauth/error";
+    }
+
+    private String hostOf(String uri) {
+        if (uri == null || uri.isBlank()) return null;
+        try {
+            String host = new URI(uri).getHost();
+            return host == null || host.isBlank() ? null : host;
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
+    private String clientInitial(String clientName) {
+        if (clientName == null || clientName.isBlank()) return "?";
+        return clientName.substring(0, 1).toUpperCase(Locale.ROOT);
     }
 }

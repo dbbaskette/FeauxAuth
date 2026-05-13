@@ -3,15 +3,17 @@
 <head th:replace="~{oauth/fragments/aurora-head :: head('Error — Enterprise OAuth')}"></head>
 <body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
-        <div class="card-elev text-center">
-            <div class="w-12 h-12 rounded-full mx-auto mb-4 grid place-items-center"
-                 style="background: rgba(251,113,133,0.12); color: #fb7185;">
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 110 16 8 8 0 010-16zm0 4a1 1 0 00-1 1v4a1 1 0 102 0V7a1 1 0 00-1-1zm0 8a1 1 0 100 2 1 1 0 000-2z"/></svg>
+        <div class="card-elev">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full mx-auto mb-4 grid place-items-center"
+                     style="background: rgba(251,113,133,0.12); color: #fb7185;">
+                    <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 110 16 8 8 0 010-16zm0 4a1 1 0 00-1 1v4a1 1 0 102 0V7a1 1 0 00-1-1zm0 8a1 1 0 100 2 1 1 0 000-2z"/></svg>
+                </div>
+                <div class="eyebrow">OAuth Error</div>
+                <h1 class="text-xl font-bold text-text mt-1">Authorization failed</h1>
             </div>
-            <div class="eyebrow">OAuth Error</div>
-            <h1 class="text-xl font-bold text-text mt-1">Authorization failed</h1>
 
-            <div class="mt-5 space-y-3 text-left">
+            <div class="mt-5 space-y-3">
                 <div>
                     <div class="field-label">Error code</div>
                     <div class="font-mono text-sm px-3 py-2 rounded bg-surface-0 border border-border text-rose-300"
@@ -20,6 +22,10 @@
                 <div>
                     <div class="field-label">Description</div>
                     <div class="text-sm text-text-dim" th:text="${errorDescription}">Something went wrong.</div>
+                </div>
+                <div th:if="${errorHint}" class="rounded border border-violet-500/30 bg-violet-500/5 px-3.5 py-2.5">
+                    <div class="eyebrow text-violet-300 mb-1">Likely cause</div>
+                    <div class="text-sm text-text-dim" th:text="${errorHint}">Hint goes here.</div>
                 </div>
             </div>
         </div>
