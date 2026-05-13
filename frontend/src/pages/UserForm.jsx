@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { Button, Card, Input } from '../components/ui'
+
+function Checkbox({ label, checked, onChange }) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="w-4 h-4 rounded bg-surface-0 border-border-strong text-violet-500 focus:ring-violet-500"
+      />
+      <span className="text-sm text-text-dim">{label}</span>
+    </label>
+  )
+}
 
 export default function UserForm() {
   const { id } = useParams()
@@ -42,54 +57,38 @@ export default function UserForm() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-white mb-6">{isEdit ? 'Edit User' : 'Add User'}</h1>
+      <div className="mb-6">
+        <div className="eyebrow">{isEdit ? 'Edit' : 'Add'}</div>
+        <h1 className="text-h1 mt-1">{isEdit ? 'Edit User' : 'Add User'}</h1>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-          <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                 required
-                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
-          <input type="text" value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
-                 required
-                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Roles (comma-separated)</label>
-          <input type="text" value={form.roles} onChange={e => setForm(f => ({ ...f, roles: e.target.value }))}
-                 placeholder="admin,editor,viewer"
-                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        {!isEdit && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Password (min 8 characters)</label>
-            <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                   required minLength={8}
-                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Card>
+          <div className="space-y-4">
+            <Input id="email" label="Email" type="email"
+                   value={form.email}
+                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+            <Input id="displayName" label="Display Name"
+                   value={form.displayName}
+                   onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))} required />
+            <Input id="roles" label="Roles (comma-separated)"
+                   value={form.roles}
+                   onChange={e => setForm(f => ({ ...f, roles: e.target.value }))}
+                   placeholder="admin,editor,viewer" />
+            {!isEdit && (
+              <Input id="password" label="Password (min 8 characters)" type="password"
+                     value={form.password}
+                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                     required minLength={8} />
+            )}
+            <Checkbox label="Enabled" checked={form.enabled}
+                      onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} />
           </div>
-        )}
+        </Card>
 
-        <label className="flex items-center space-x-2">
-          <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
-                 className="rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500" />
-          <span className="text-sm text-gray-300">Enabled</span>
-        </label>
-
-        <div className="flex space-x-3">
-          <button type="submit"
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
-            {isEdit ? 'Save Changes' : 'Create User'}
-          </button>
-          <button type="button" onClick={() => navigate('/users')}
-                  className="px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors">
-            Cancel
-          </button>
+        <div className="flex gap-2.5">
+          <Button type="submit">{isEdit ? 'Save Changes' : 'Create User'}</Button>
+          <Button type="button" variant="ghost" onClick={() => navigate('/users')}>Cancel</Button>
         </div>
       </form>
     </div>

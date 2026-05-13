@@ -2,10 +2,17 @@ import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import DataTable from '../components/DataTable'
 import { tokenColumns } from '../components/tokenColumns'
+import { Badge, Button } from '../components/ui'
 
 const columns = [
   ...tokenColumns,
-  { key: 'revoked', label: 'Status', render: v => v ? 'Revoked' : 'Active' },
+  {
+    key: 'revoked',
+    label: 'Status',
+    render: v => v
+      ? <Badge variant="danger">Revoked</Badge>
+      : <Badge variant="success">Active</Badge>,
+  },
 ]
 
 export default function Tokens() {
@@ -29,14 +36,19 @@ export default function Tokens() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-6">Active Tokens</h1>
+      <div className="mb-6">
+        <div className="eyebrow">Monitor</div>
+        <h1 className="text-h1 mt-1">Active Tokens</h1>
+      </div>
 
       <DataTable
         columns={columns}
         data={tokens}
+        emptyTitle="No tokens issued"
+        emptyDescription="Once a client mints a token, it'll appear here."
         actions={(row) => (
           !row.revoked && (
-            <button onClick={() => handleRevoke(row.jti)} className="text-red-400 hover:text-red-300">
+            <button onClick={() => handleRevoke(row.jti)} className="text-rose-400 hover:text-rose-300 text-sm font-medium">
               Revoke
             </button>
           )
@@ -44,12 +56,10 @@ export default function Tokens() {
       />
 
       {totalPages > 1 && (
-        <div className="flex justify-center space-x-2 mt-4">
-          <button disabled={page === 0} onClick={() => loadTokens(page - 1)}
-                  className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50">Prev</button>
-          <span className="text-gray-400 py-1">Page {page + 1} of {totalPages}</span>
-          <button disabled={page >= totalPages - 1} onClick={() => loadTokens(page + 1)}
-                  className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50">Next</button>
+        <div className="flex justify-center items-center gap-3 mt-5">
+          <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => loadTokens(page - 1)}>‹ Prev</Button>
+          <span className="text-text-mute text-sm">Page {page + 1} of {totalPages}</span>
+          <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => loadTokens(page + 1)}>Next ›</Button>
         </div>
       )}
     </div>

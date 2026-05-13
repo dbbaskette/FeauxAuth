@@ -2,12 +2,27 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import DataTable from '../components/DataTable'
+import { Badge, Mono, ScopeBadge, Button } from '../components/ui'
 
 const columns = [
-  { key: 'clientId', label: 'Client ID' },
+  { key: 'clientId', label: 'Client ID', render: v => <Mono>{v}</Mono> },
   { key: 'name', label: 'Name' },
-  { key: 'allowedScopes', label: 'Scopes' },
-  { key: 'enabled', label: 'Enabled', render: v => v ? 'Yes' : 'No' },
+  {
+    key: 'allowedScopes',
+    label: 'Scopes',
+    render: v => (
+      <div className="flex flex-wrap gap-1">
+        {(v || '').split(/\s+/).filter(Boolean).map(s => <ScopeBadge key={s} scope={s} />)}
+      </div>
+    ),
+  },
+  {
+    key: 'enabled',
+    label: 'Status',
+    render: v => v
+      ? <Badge variant="success">Enabled</Badge>
+      : <Badge variant="danger">Disabled</Badge>,
+  },
   { key: 'accessTokenTtl', label: 'Token TTL', render: v => `${v}s` },
 ]
 
@@ -27,22 +42,22 @@ export default function Clients() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">OAuth Clients</h1>
-        <Link
-          to="/clients/new"
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          Add Client
-        </Link>
+        <div>
+          <div className="eyebrow">Manage</div>
+          <h1 className="text-h1 mt-1">OAuth Clients</h1>
+        </div>
+        <Button as={Link} to="/clients/new" size="sm">+ Register Client</Button>
       </div>
 
       <DataTable
         columns={columns}
         data={clients}
+        emptyTitle="No clients yet"
+        emptyDescription="Register your first OAuth client to start issuing tokens."
         actions={(row) => (
-          <div className="space-x-3">
-            <Link to={`/clients/${row.id}/edit`} className="text-indigo-400 hover:text-indigo-300">Edit</Link>
-            <button onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-300">Delete</button>
+          <div className="inline-flex items-center gap-3">
+            <Link to={`/clients/${row.id}/edit`} className="text-violet-400 hover:text-violet-300 text-sm font-medium">Edit</Link>
+            <button onClick={() => handleDelete(row.id)} className="text-rose-400 hover:text-rose-300 text-sm font-medium">Delete</button>
           </div>
         )}
       />
