@@ -1,60 +1,53 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Sign-In — FeauxAuth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+<head th:replace="~{oauth/fragments/aurora-head :: head('Device Sign-In — Enterprise OAuth')}"></head>
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
-        <div class="bg-gray-800 rounded-2xl shadow-xl p-8">
-            <div class="text-center mb-8">
-                <h1 class="text-2xl font-bold text-white">Device Sign-In</h1>
-                <p class="text-gray-400 mt-2">Confirm the code shown on your device, then sign in.</p>
+        <div class="card-elev">
+            <div class="text-center mb-7">
+                <div class="brand-mark mx-auto mb-3">F</div>
+                <div class="eyebrow">Device Sign-In</div>
+                <h1 class="text-2xl font-bold text-text mt-1">Confirm your device</h1>
+                <p class="text-text-dim text-sm mt-1.5">Verify the code shown on your device, then sign in.</p>
             </div>
 
-            <div th:if="${loginError}" class="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-6">
+            <div th:if="${loginError}" class="alert-error mb-5">
                 <span th:text="${loginError}">Error</span>
             </div>
 
-            <form method="post" th:action="@{/device}" class="space-y-6">
+            <form method="post" th:action="@{/device}" class="space-y-4">
                 <div>
-                    <label for="user_code" class="block text-sm font-medium text-gray-300 mb-2">Device Code</label>
+                    <label for="user_code" class="field-label">Device Code</label>
                     <input type="text" id="user_code" name="user_code" required
                            th:value="${userCode}"
                            autocomplete="off" autocapitalize="characters" spellcheck="false"
-                           class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono tracking-widest text-center text-lg uppercase"
+                           class="input font-mono text-center text-lg uppercase"
+                           style="letter-spacing: 0.3em;"
                            placeholder="XXXX-XXXX">
                 </div>
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <label for="email" class="field-label">Email</label>
                     <input type="email" id="email" name="email" required
-                           class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                           placeholder="user@example.com">
+                           class="input" placeholder="user@example.com" autocomplete="email">
                 </div>
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <label for="password" class="field-label">Password</label>
                     <input type="password" id="password" name="password" required
-                           class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                           placeholder="••••••••">
+                           class="input" placeholder="••••••••" autocomplete="current-password">
                 </div>
-                <div class="flex gap-3">
+                <div class="flex gap-2.5 pt-1">
                     <button type="submit" name="action" value="approve"
-                            class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                            class="btn btn-primary flex-1">
                         Approve &amp; Sign In
                     </button>
                     <button type="submit" name="action" value="deny" formnovalidate
-                            class="py-3 px-4 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                            class="btn">
                         Cancel
                     </button>
                 </div>
             </form>
-
-            <div class="mt-6 text-center">
-                <p class="text-xs text-gray-500">FeauxAuth — Lab / Demo use only. Not for production.</p>
-            </div>
         </div>
+        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only. Not for production.</p>
     </div>
 </body>
 </html>

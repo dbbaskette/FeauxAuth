@@ -1,22 +1,29 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error — FeauxAuth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+<head th:replace="~{oauth/fragments/aurora-head :: head('Error — Enterprise OAuth')}"></head>
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
-        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-            <div class="text-red-400 text-5xl mb-4">!</div>
-            <h1 class="text-xl font-bold text-white mb-2">OAuth Error</h1>
-            <p class="text-red-400 font-mono text-sm mb-2" th:text="${error}">error_code</p>
-            <p class="text-gray-400" th:text="${errorDescription}">Something went wrong.</p>
-            <div class="mt-6">
-                <p class="text-xs text-gray-500">FeauxAuth — Lab / Demo use only</p>
+        <div class="card-elev text-center">
+            <div class="w-12 h-12 rounded-full mx-auto mb-4 grid place-items-center"
+                 style="background: rgba(251,113,133,0.12); color: #fb7185;">
+                <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 110 16 8 8 0 010-16zm0 4a1 1 0 00-1 1v4a1 1 0 102 0V7a1 1 0 00-1-1zm0 8a1 1 0 100 2 1 1 0 000-2z"/></svg>
+            </div>
+            <div class="eyebrow">OAuth Error</div>
+            <h1 class="text-xl font-bold text-text mt-1">Authorization failed</h1>
+
+            <div class="mt-5 space-y-3 text-left">
+                <div>
+                    <div class="field-label">Error code</div>
+                    <div class="font-mono text-sm px-3 py-2 rounded bg-surface-0 border border-border text-rose-300"
+                         th:text="${error}">error_code</div>
+                </div>
+                <div>
+                    <div class="field-label">Description</div>
+                    <div class="text-sm text-text-dim" th:text="${errorDescription}">Something went wrong.</div>
+                </div>
             </div>
         </div>
+        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only.</p>
     </div>
 </body>
 </html>

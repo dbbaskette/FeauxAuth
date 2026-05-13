@@ -1,48 +1,44 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authorize — FeauxAuth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+<head th:replace="~{oauth/fragments/aurora-head :: head('Authorize — Enterprise OAuth')}"></head>
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
-        <div class="bg-gray-800 rounded-2xl shadow-xl p-8">
+        <div class="card-elev">
             <div class="text-center mb-6">
-                <h1 class="text-2xl font-bold text-white">Authorize Access</h1>
-                <p class="text-gray-400 mt-2">
-                    <span class="text-indigo-400 font-semibold" th:text="${clientName}">App</span>
-                    is requesting access to your account
-                </p>
+                <div class="brand-mark mx-auto mb-3" th:text="${#strings.toUpperCase(#strings.substring(clientName, 0, 1))}">A</div>
+                <div class="eyebrow">Authorize</div>
+                <div class="text-[20px] font-semibold text-text mt-1">
+                    <span th:text="${clientName}">App</span> wants access
+                </div>
+                <p class="text-text-dim text-sm mt-1.5">Review the permissions below before approving.</p>
             </div>
 
-            <div class="bg-gray-700/50 rounded-lg p-4 mb-6">
-                <p class="text-sm font-medium text-gray-300 mb-3">This application wants to:</p>
-                <ul class="space-y-2">
-                    <li th:each="scopeItem : ${scopeDescriptions}" class="flex items-center text-sm text-gray-300">
-                        <svg class="w-4 h-4 mr-2 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        <span th:text="${scopeItem}">Permission</span>
-                    </li>
-                </ul>
+            <div class="flex items-center justify-between mb-2.5">
+                <span class="eyebrow">Requested permissions</span>
             </div>
 
-            <form method="post" th:action="@{/oauth/consent}" class="space-y-3">
-                <button type="submit" name="approve" value="true"
-                        class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
-                    Allow
-                </button>
-                <button type="submit" name="approve" value="false"
-                        class="w-full py-3 px-4 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors">
-                    Deny
-                </button>
+            <ul class="space-y-1 mb-6">
+                <li th:each="item : ${scopeItems}" class="scope-row">
+                    <span th:class="'badge badge-' + ${item.risk}">
+                        <span class="badge-dot"></span>
+                        <span th:text="${#strings.toUpperCase(item.risk)}">READ</span>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <div class="scope-name" th:text="${item.scope}">openid</div>
+                        <div class="scope-desc" th:text="${item.description}">Verify your identity</div>
+                    </div>
+                </li>
+            </ul>
+
+            <form method="post" th:action="@{/oauth/consent}" class="space-y-2.5">
+                <button type="submit" name="approve" value="true" class="btn btn-primary btn-block">Allow Access</button>
+                <button type="submit" name="approve" value="false" class="btn btn-block bg-transparent border-border text-text-dim hover:text-text hover:bg-surface-2">Deny</button>
             </form>
 
-            <div class="mt-6 text-center">
-                <p class="text-xs text-gray-500">Signed in as <span class="text-gray-400" th:text="${userEmail}">user</span></p>
-            </div>
+            <p class="text-center text-xs text-text-mute mt-5">
+                Signed in as
+                <span class="font-mono text-text-dim" th:text="${userEmail}">user</span>
+            </p>
         </div>
     </div>
 </body>

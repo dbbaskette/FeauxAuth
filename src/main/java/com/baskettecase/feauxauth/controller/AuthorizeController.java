@@ -2,6 +2,7 @@ package com.baskettecase.feauxauth.controller;
 
 import com.baskettecase.feauxauth.model.OAuthClient;
 import com.baskettecase.feauxauth.model.OAuthUser;
+import com.baskettecase.feauxauth.oauth.ScopeRisk;
 import com.baskettecase.feauxauth.service.AuthCodeService;
 import com.baskettecase.feauxauth.service.ClientService;
 import com.baskettecase.feauxauth.service.UserService;
@@ -116,7 +117,7 @@ public class AuthorizeController {
             session.setAttribute("auth_user_id", user.getId().toString());
             model.addAttribute("clientName", clientOpt.get().getName());
             model.addAttribute("userEmail", user.getEmail());
-            model.addAttribute("scopeDescriptions", describeScopeItems(scope));
+            model.addAttribute("scopeItems", buildScopeItems(scope));
             return "oauth/consent";
         }
 
@@ -193,6 +194,19 @@ public class AuthorizeController {
         if (scope == null) return List.of();
         return Arrays.stream(scope.split("\\s+"))
                 .map(s -> SCOPE_DESCRIPTIONS.getOrDefault(s, "Access: " + s))
+                .toList();
+    }
+
+    public record ScopeItem(String scope, String risk, String description) {}
+
+    private List<ScopeItem> buildScopeItems(String scope) {
+        if (scope == null) return List.of();
+        return Arrays.stream(scope.trim().split("\\s+"))
+                .filter(s -> !s.isBlank())
+                .map(s -> new ScopeItem(
+                        s,
+                        ScopeRisk.classify(s).cssToken(),
+                        SCOPE_DESCRIPTIONS.getOrDefault(s, "Access: " + s)))
                 .toList();
     }
 }
