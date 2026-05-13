@@ -27,3 +27,6 @@ frontend/dist/
 # Env
 .env
 
+# Superpowers brainstorming artifacts
+.superpowers/
+
