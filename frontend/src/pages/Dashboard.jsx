@@ -33,9 +33,10 @@ const ICON = {
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/api/admin/dashboard/stats').then(setStats)
+    api.get('/api/admin/dashboard/stats').then(s => { setStats(s); setLoading(false) })
   }, [])
 
   return (
@@ -70,6 +71,8 @@ export default function Dashboard() {
       <DataTable
         columns={dashboardColumns}
         data={stats?.recentTokens || []}
+        loading={loading}
+        skeletonRows={4}
         emptyTitle="No tokens yet"
         emptyDescription="Tokens issued through the OAuth flows will appear here."
       />

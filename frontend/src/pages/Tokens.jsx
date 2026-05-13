@@ -9,22 +9,40 @@ const columns = [
   {
     key: 'revoked',
     label: 'Status',
+    sortable: true,
     render: v => v
       ? <Badge variant="danger">Revoked</Badge>
       : <Badge variant="success">Active</Badge>,
   },
 ]
 
+const filters = [
+  {
+    key: 'revoked',
+    label: 'Status',
+    options: [
+      { value: 'false', label: 'Active' },
+      { value: 'true', label: 'Revoked' },
+    ],
+  },
+]
+
 export default function Tokens() {
   const [tokens, setTokens] = useState([])
+  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
 
   const loadTokens = async (p) => {
-    const data = await api.get(`/api/admin/tokens?page=${p}&size=20`)
-    setTokens(data.content || [])
-    setTotalPages(data.totalPages || 0)
-    setPage(p)
+    setLoading(true)
+    try {
+      const data = await api.get(`/api/admin/tokens?page=${p}&size=20`)
+      setTokens(data.content || [])
+      setTotalPages(data.totalPages || 0)
+      setPage(p)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadTokens(0) }, [])
@@ -44,6 +62,10 @@ export default function Tokens() {
       <DataTable
         columns={columns}
         data={tokens}
+        loading={loading}
+        searchableKeys={['jti', 'clientId', 'userId', 'scope']}
+        filters={filters}
+        defaultSort={{ key: 'createdAt', dir: 'desc' }}
         emptyTitle="No tokens issued"
         emptyDescription="Once a client mints a token, it'll appear here."
         actions={(row) => (

@@ -28,6 +28,13 @@ public class AdminTokenApi {
                 LocalDateTime.now(), PageRequest.of(page, size));
     }
 
+    @GetMapping("/{jti}")
+    public ResponseEntity<AccessToken> findOne(@PathVariable String jti) {
+        return accessTokenRepository.findById(jti)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/{jti}/revoke")
     public ResponseEntity<Void> revoke(@PathVariable String jti) {
         tokenService.revokeToken(jti);

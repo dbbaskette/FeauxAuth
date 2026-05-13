@@ -5,8 +5,8 @@ import DataTable from '../components/DataTable'
 import { Badge, Button, useToast } from '../components/ui'
 
 const columns = [
-  { key: 'email', label: 'Email' },
-  { key: 'displayName', label: 'Display Name' },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'displayName', label: 'Display Name', sortable: true },
   {
     key: 'enabled',
     label: 'Status',
@@ -17,16 +17,18 @@ const columns = [
   {
     key: 'lastLoginAt',
     label: 'Last Login',
+    sortable: true,
     render: v => v ? new Date(v).toLocaleString() : <span className="text-text-mute">Never</span>,
   },
 ]
 
 export default function Users() {
   const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
   const toast = useToast()
 
   useEffect(() => {
-    api.get('/api/admin/users').then(setUsers)
+    api.get('/api/admin/users').then(u => { setUsers(u); setLoading(false) })
   }, [])
 
   const handleDelete = async (id) => {
@@ -58,6 +60,9 @@ export default function Users() {
       <DataTable
         columns={columns}
         data={users}
+        loading={loading}
+        searchableKeys={['email', 'displayName']}
+        defaultSort={{ key: 'email', dir: 'asc' }}
         emptyTitle="No users yet"
         emptyDescription="Add your first user to enable interactive OAuth flows."
         actions={(row) => (

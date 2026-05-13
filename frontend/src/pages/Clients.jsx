@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import DataTable from '../components/DataTable'
-import { Badge, Mono, ScopeBadge, Button } from '../components/ui'
+import { Badge, CopyableMono, ScopeBadge, Button } from '../components/ui'
 
 const columns = [
-  { key: 'clientId', label: 'Client ID', render: v => <Mono>{v}</Mono> },
-  { key: 'name', label: 'Name' },
+  { key: 'clientId', label: 'Client ID', sortable: true,
+    render: v => <CopyableMono>{v}</CopyableMono> },
+  { key: 'name', label: 'Name', sortable: true },
   {
     key: 'allowedScopes',
     label: 'Scopes',
@@ -23,14 +24,15 @@ const columns = [
       ? <Badge variant="success">Enabled</Badge>
       : <Badge variant="danger">Disabled</Badge>,
   },
-  { key: 'accessTokenTtl', label: 'Token TTL', render: v => `${v}s` },
+  { key: 'accessTokenTtl', label: 'Token TTL', sortable: true, render: v => `${v}s` },
 ]
 
 export default function Clients() {
   const [clients, setClients] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/api/admin/clients').then(setClients)
+    api.get('/api/admin/clients').then(c => { setClients(c); setLoading(false) })
   }, [])
 
   const handleDelete = async (id) => {
@@ -52,6 +54,9 @@ export default function Clients() {
       <DataTable
         columns={columns}
         data={clients}
+        loading={loading}
+        searchableKeys={['clientId', 'name']}
+        defaultSort={{ key: 'name', dir: 'asc' }}
         emptyTitle="No clients yet"
         emptyDescription="Register your first OAuth client to start issuing tokens."
         actions={(row) => (
