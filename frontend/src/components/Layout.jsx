@@ -35,7 +35,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen">
       <nav className="border-b border-border bg-surface-1/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="brand-mark shrink-0">F</span>
@@ -102,7 +102,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-w-0">
+      <main className="px-4 sm:px-6 lg:px-8 py-8 min-w-0">
         <Outlet />
       </main>
     </div>
