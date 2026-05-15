@@ -1,18 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logged Out — FeauxAuth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+<head th:replace="~{oauth/fragments/aurora-head :: head('Logged Out — Enterprise OAuth')}"></head>
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
-        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-            <h1 class="text-2xl font-bold text-white mb-4">Signed Out</h1>
-            <p class="text-gray-400 mb-6">You have been successfully logged out of FeauxAuth.</p>
-            <p class="text-xs text-gray-500">FeauxAuth — Lab / Demo use only. Not for production.</p>
+        <div class="card-elev text-center">
+            <div class="brand-mark mx-auto mb-3">F</div>
+            <div class="eyebrow">Session Ended</div>
+            <h1 class="text-2xl font-bold text-text mt-1">Signed Out</h1>
+            <p class="text-text-dim text-sm mt-2.5">You have been signed out of Enterprise OAuth.</p>
         </div>
+        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only. Not for production.</p>
     </div>
 </body>
 </html>

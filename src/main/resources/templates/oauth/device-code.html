@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{oauth/fragments/aurora-head :: head('Device Sign-In — Enterprise OAuth')}"></head>
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md">
+        <div class="card-elev">
+            <div class="text-center mb-7">
+                <div class="brand-mark mx-auto mb-3">F</div>
+                <div class="eyebrow">Device Sign-In · Step 1 of 3</div>
+                <h1 class="text-2xl font-bold text-text mt-1">Enter your code</h1>
+                <p class="text-text-dim text-sm mt-1.5">Type the code shown on your device.</p>
+            </div>
+
+            <div th:if="${loginError}" class="alert-error mb-5">
+                <span th:text="${loginError}">Error</span>
+            </div>
+
+            <form method="post" th:action="@{/device}" class="space-y-4">
+                <div>
+                    <label for="user_code" class="field-label">Device Code</label>
+                    <input type="text" id="user_code" name="user_code" required
+                           th:value="${userCode}"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false"
+                           class="input font-mono text-center text-lg uppercase"
+                           style="letter-spacing: 0.3em;"
+                           placeholder="XXXX-XXXX"
+                           autofocus>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Continue</button>
+            </form>
+        </div>
+        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only. Not for production.</p>
+    </div>
+</body>
+</html>

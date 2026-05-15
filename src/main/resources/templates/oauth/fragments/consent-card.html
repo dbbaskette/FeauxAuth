@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Shared consent body — used by both the authorization-code flow
+  (consent.html) and the device flow (device-consent.html). Takes:
+    clientName, clientInitial, redirectHost (may be null),
+    userEmail (may be null), scopeItems (List<ScopeItem>),
+    approveAction (URL), approveValue, denyValue,
+    approveLabel, denyLabel.
+-->
+<body>
+<th:block th:fragment="body(clientName, clientInitial, redirectHost, userEmail, scopeItems, approveAction, approveValue, denyValue, approveLabel, denyLabel)">
+    <div class="text-center mb-6">
+        <div class="brand-mark mx-auto mb-3" th:text="${clientInitial}">A</div>
+        <div class="eyebrow">Authorize</div>
+        <div class="text-[20px] font-semibold text-text mt-1">
+            <span th:text="${clientName}">App</span> wants access
+        </div>
+        <p th:if="${redirectHost}" class="text-text-dim text-sm mt-1.5">
+            Returns to <span class="font-mono text-text" th:text="${redirectHost}">app.example.com</span>
+        </p>
+        <p th:unless="${redirectHost}" class="text-text-dim text-sm mt-1.5">Review the permissions below before approving.</p>
+    </div>
+
+    <div class="flex items-center justify-between mb-2.5">
+        <span class="eyebrow">Requested permissions</span>
+    </div>
+
+    <ul class="space-y-1 mb-6">
+        <li th:each="item : ${scopeItems}" class="scope-row">
+            <span th:class="'badge badge-' + ${item.risk}">
+                <span class="badge-dot"></span>
+                <span th:text="${#strings.toUpperCase(item.risk)}">READ</span>
+            </span>
+            <div class="flex-1 min-w-0">
+                <div class="scope-name" th:text="${item.scope}">openid</div>
+                <div class="scope-desc" th:text="${item.description}">Verify your identity</div>
+            </div>
+        </li>
+    </ul>
+
+    <form method="post" th:action="${approveAction}" class="space-y-2.5">
+        <button type="submit" name="approve" th:value="${approveValue}" class="btn btn-primary btn-block"
+                th:text="${approveLabel}">Allow Access</button>
+        <button type="submit" name="approve" th:value="${denyValue}"
+                class="btn btn-block bg-transparent border-border text-text-dim hover:text-text hover:bg-surface-2"
+                th:text="${denyLabel}">Deny</button>
+    </form>
+
+    <p th:if="${userEmail}" class="text-center text-xs text-text-mute mt-5">
+        Signed in as
+        <span class="font-mono text-text-dim" th:text="${userEmail}">user</span>
+    </p>
+</th:block>
+</body>
+</html>

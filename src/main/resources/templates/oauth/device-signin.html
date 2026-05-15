@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head th:replace="~{oauth/fragments/aurora-head :: head('Sign In — Enterprise OAuth')}"></head>
-<body class="min-h-screen flex items-center justify-center px-4">
+<body class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
         <div class="card-elev">
             <div class="text-center mb-7">
                 <div class="brand-mark mx-auto mb-3">F</div>
-                <div class="eyebrow">Enterprise OAuth</div>
-                <h1 class="text-2xl font-bold text-text mt-1">Sign in to continue</h1>
+                <div class="eyebrow">Device Sign-In · Step 2 of 3</div>
+                <h1 class="text-2xl font-bold text-text mt-1">Sign in</h1>
                 <p class="text-text-dim text-sm mt-1.5">
                     Authorizing
                     <span class="font-semibold text-text" th:text="${clientName}">App</span>
                 </p>
                 <p class="text-xs text-text-mute mt-1.5">
-                    Requesting scopes:
-                    <span class="font-mono text-text-dim" th:text="${scope}">openid</span>
+                    Code:
+                    <span class="font-mono text-text-dim" th:text="${formattedUserCode}">XXXX-XXXX</span>
                 </p>
             </div>
 
@@ -22,21 +22,24 @@
                 <span th:text="${loginError}">Error</span>
             </div>
 
-            <form method="post" th:action="@{/oauth/authorize}" class="space-y-4">
+            <form method="post" th:action="@{/device/sign-in}" class="space-y-4">
                 <div>
                     <label for="email" class="field-label">Email</label>
                     <input type="email" id="email" name="email" required
-                           class="input" placeholder="user@example.com" autocomplete="email">
+                           class="input" placeholder="user@example.com" autocomplete="email" autofocus>
                 </div>
                 <div>
                     <label for="password" class="field-label">Password</label>
                     <input type="password" id="password" name="password" required
                            class="input" placeholder="••••••••" autocomplete="current-password">
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+                <div class="flex gap-2.5 pt-1">
+                    <button type="submit" class="btn btn-primary flex-1">Continue</button>
+                    <button type="submit" name="action" value="deny" formnovalidate class="btn">Cancel</button>
+                </div>
             </form>
         </div>
-        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only. Not for production.</p>
+        <p class="text-center text-xs text-text-mute mt-5">Enterprise OAuth — Lab / Demo use only.</p>
     </div>
 </body>
 </html>

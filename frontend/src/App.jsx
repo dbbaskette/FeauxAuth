@@ -9,6 +9,7 @@ import Users from './pages/Users'
 import UserForm from './pages/UserForm'
 import Tokens from './pages/Tokens'
 import Inspector from './pages/Inspector'
+import { ToastProvider } from './components/ui'
 
 function ProtectedRoute({ children }) {
   if (!api.isAuthenticated()) {
@@ -19,19 +20,21 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Dashboard />} />
-        <Route path="clients" element={<Clients />} />
-        <Route path="clients/new" element={<ClientForm />} />
-        <Route path="clients/:id/edit" element={<ClientForm />} />
-        <Route path="users" element={<Users />} />
-        <Route path="users/new" element={<UserForm />} />
-        <Route path="users/:id/edit" element={<UserForm />} />
-        <Route path="tokens" element={<Tokens />} />
-        <Route path="inspector" element={<Inspector />} />
-      </Route>
-    </Routes>
+    <ToastProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route index element={<Dashboard />} />
+          <Route path="clients" element={<Clients />} />
+          <Route path="clients/new" element={<ClientForm />} />
+          <Route path="clients/:id/edit" element={<ClientForm />} />
+          <Route path="users" element={<Users />} />
+          <Route path="users/new" element={<UserForm />} />
+          <Route path="users/:id/edit" element={<UserForm />} />
+          <Route path="tokens" element={<Tokens />} />
+          <Route path="inspector" element={<Inspector />} />
+        </Route>
+      </Routes>
+    </ToastProvider>
   )
 }
